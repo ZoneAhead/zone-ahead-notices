@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zone Ahead road safety notices</title>
+<style>
+  :root { --bg: #f4f6f8; --card: #fff; --ink: #1b2430; --soft: #5b6573; --navy: #1c2f57; --red: #b3261e; --link: #1d5fd1; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #10161d; --card: #1b2430; --ink: #f2f5f8; --soft: #a9b3bf; --navy: #9db8ff; --red: #ff8a80; --link: #8fb4ff; } }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 640px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 1.75rem; line-height: 1.2; margin: 0 0 6px; }
+  .lede { color: var(--soft); margin: 0 0 24px; }
+  article { background: var(--card); border-radius: 18px; padding: 18px; margin: 0 0 14px; box-shadow: 0 2px 10px rgb(0 0 0 / .06); }
+  .tag { font-size: .8rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--navy); }
+  h2 { font-size: 1.3rem; margin: 4px 0; }
+  .when { color: var(--red); font-weight: 700; margin: 0 0 6px; }
+  p { margin: 0 0 8px; }
+  a { color: var(--link); font-weight: 700; }
+  .credit { font-size: .8rem; color: var(--soft); }
+  .empty { color: var(--soft); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Road safety notices</h1>
+  <p class="lede">Current police road safety operations and double demerit periods shown in the Zone Ahead app, by state. Always check the official source.</p>
+  <div id="list"><p class="empty">Loading…</p></div>
+</main>
+<script>
+  const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const stateOf = n => { const a = n.area || { type: 'state' }; return (a.type === 'state' ? (a.state || n.state || 'VIC') : n.state) || ''; };
+  const live = n => { const t = Date.now(); return (!n.starts || Date.parse(n.starts) <= t) && (!n.ends || t < Date.parse(n.ends)); };
+  fetch('notices.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(d => {
+    const list = (d.notices || []).filter(live);
+    document.getElementById('list').innerHTML = list.length ? list.map(n => `<article>
+      <div class="tag">${esc(stateOf(n))}</div><h2>${esc(n.title)}</h2>
+      ${n.when ? `<p class="when">${esc(n.when)}</p>` : ''}<p>${esc(n.text)}</p>
+      ${n.source && /^https:\/\//.test(n.source.url || '') ? `<p><a href="${esc(n.source.url)}" rel="noopener">${esc(n.source.title || 'Official source')}</a></p>` : ''}
+      ${n.credit ? `<p class="credit">${esc(n.credit)}</p>` : ''}</article>`).join('') : '<p class="empty">No current notices.</p>';
+  }).catch(() => { document.getElementById('list').innerHTML = '<p class="empty">Couldn\'t load the notices.</p>'; });
+</script>
+</body>
+</html>

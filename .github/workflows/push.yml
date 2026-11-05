@@ -1,0 +1,36 @@
+# Sends a push alert to the phones in a notice's state once the notice is live:
+# straight after it's merged, or within the hour after it starts. Quiet from 9 pm to 7 am local time.
+name: Send push alerts
+on:
+  push:
+    branches: [main]
+    paths: [notices.json]
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: push-alerts
+  cancel-in-progress: false
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Send alerts for notices that are live now
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: node scripts/push.mjs
+      - name: Remember what was sent
+        run: |
+          if ! git diff --quiet sent.json; then
+            git config user.name "zone-ahead-bot"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add sent.json
+            git commit -m "Record push alerts sent"
+            git push
+          fi

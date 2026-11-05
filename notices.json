@@ -1,0 +1,5 @@
+{
+  "updated": "2026-11-05",
+  "about": "Road safety notices shown in Zone Ahead. Only approved notices go here: each one arrives as a pull request from the daily check, and merging it publishes it. area.type: 'state' with state VIC, NSW, QLD, SA or ACT; 'circles' ([{lat, lon, km, name}]) or 'box' (n, s, e, w), which also need a top-level 'state' for the push alert. Times include the local offset: +11:00 for Melbourne, Sydney and Canberra summer time, +10:00 for Brisbane, +10:30 for Adelaide summer time. Add \"push\": false to show a notice in the app without a push alert.",
+  "notices": []
+}
