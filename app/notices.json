@@ -1,0 +1,5 @@
+{
+  "updated": "2026-11-05",
+  "about": "Road safety notices shown when Zone Ahead opens. Only add notices you have checked and approved. area.type: 'state' with state VIC, NSW, QLD, SA or ACT (VIC if left out); 'circles' ([{lat, lon, km, name}]); or 'box' (n, s, e, w). Times include the local offset, e.g. +11:00 for Melbourne and Sydney summer time, +10:00 for Brisbane, +10:30 for Adelaide summer time.",
+  "notices": []
+}
