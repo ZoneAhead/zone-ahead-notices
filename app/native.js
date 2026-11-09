@@ -81,6 +81,13 @@ window.ZA_NOTICES_URL = 'https://zoneahead.github.io/zone-ahead-notices/notices.
     var s = state(), k = JSON.stringify(s);
     if (k !== last) { last = k; CP.update(s).catch(function () { }); }
   }, 1000);
+  // driver reports (police, potholes, crashes…): the iPhone picks the nearest one ahead for its own row on the car screen
+  var lastRep = '';
+  setInterval(function () {
+    if (!CP.reports || typeof window.ZA_REPORTS !== 'function') return;
+    var list = window.ZA_REPORTS(), k = JSON.stringify(list);
+    if (k !== lastRep) { lastRep = k; CP.reports({ list: list }).catch(function () { }); }
+  }, 5000);
   // a report button on the car screen: the same as tapping Report, then that kind (camera car, police, a road hazard)
   CP.addListener('report', function (d) {
     var KINDS = ['camera', 'police', 'hazard', 'pothole', 'crash', 'roadworks'];

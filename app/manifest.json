@@ -73,20 +73,20 @@
 "size": 5048
 },
 "index.html": {
-"sha": "5e725dc04cc9859886bc5a6e6387d37d1e5201f2804cc19f334f2e257932e910",
-"size": 1945908
+"sha": "4d6e0fcc93683df5af5be5678e0bb9a620ee9be1a9a6eafae789d4f607f5ab43",
+"size": 1946474
 },
 "manifest.webmanifest": {
 "sha": "e4fa360f27dd5f78cbfc7b667ab278eebb2bc9ee99495497f390613f040ac4ce",
 "size": 519
 },
 "native-zones.json": {
-"sha": "f0bb6529b6d4bd9e12b082a5f72326053c234d7981a28739307ea62771ab11ba",
-"size": 2745262
+"sha": "611ae5b8c834e63508404e280f0117ba71bcec6decbc5dc1100f0c4923ac0d02",
+"size": 3820261
 },
 "native.js": {
-"sha": "bd02dd16a4f87fd1a5bbf441e18f4648b9b587876c00f40d0328f7be253b709d",
-"size": 20939
+"sha": "52a043e1716e7543c845cc36007dacd056741e1fb4c195be85cd1e5d66c3dd83",
+"size": 21349
 },
 "notices.json": {
 "sha": "1deb99001d690e5031249af6f5c3b9505716287601ecb6cf561bb496e4f97294",
@@ -97,7 +97,7 @@
 "size": 2622
 },
 "web-version.json": {
-"sha": "9a2db7e930159f476933b8d9cc25a0e862285ce2c3c4a2db782abfb8d40ebd41",
+"sha": "c30489239be8cd9be7608fe5f8d163c2f7c1a545745b337120229ea998fb3404",
 "size": 100
 }
 },
@@ -105,5 +105,5 @@
 "index.html"
 ],
 "native": 2,
-"version": 1794124852
+"version": 1794193775
 }

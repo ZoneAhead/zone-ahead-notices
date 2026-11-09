@@ -5846,6 +5846,12 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
       if (X.pinsSync) X.pinsSync();
     }
 
+    // ---------- driver reports for the car screen (9 Nov): the iPhone works out the nearest one ahead itself, on each GPS fix,
+    // so it stays put in its own row on CarPlay (and keeps going with the phone locked until the reports expire) ----------
+    window.ZA_REPORTS = () => reports.filter(r => r.kind !== 'council' && KIND[r.kind] && r.lat != null).map(r => ({
+      id: String(r.id), kind: r.kind, name: KIND[r.kind].name, street: r.street || '', lat: r.lat, lon: r.lon,
+      until: new Date(r.last_seen || r.created_at).getTime() + lifeMs(r.kind) }));
+
     // ---------- touch anywhere outside a menu to close it (feedback 8 Nov) ----------
     // Settings, the report sheet, notices and the route search close on a tap on the dimmed map behind them (their own
     // code). Here: Car mode's report, list and camera views go back to the warning, and the camera info card closes.
