@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en-AU">
-<head><script>try{localStorage.setItem("za-state","ALL")}catch(e){}</script>
+<head>
+<script src="native.js"></script><script>try{localStorage.setItem("za-state","ALL")}catch(e){}</script>
 <meta charset="utf-8">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
@@ -3255,16 +3256,17 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   // identity of an alert; listed sites on the same street count as one zone, so they don't warn twice
   const lKey = z => z.rep ? 'r' + z.rep.id : z.fixed ? 'f' + (z.x.site ?? z.x.i) : 'm' + z.x.type + '|' + norm(z.x.street);   // cameras at one intersection share a key
 
-  function liveStart(withCar) {
+  function liveStart(withCar, byTap) {
     if (!navigator.geolocation) { toast('Location isn\'t available in this browser.'); return; }
     if (S.mode) exitSim();
     LIVE.mw = null;   // freeway check starts afresh
     if (APPMODE.mode === 'park') setMode('cam', true);   // driving always shows the camera view
     // iPhones only allow sound after a tap: unlock speech and the beeper now, inside this tap
     try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume && actx.resume(); } catch { }
-    // said once in 15 minutes: a drive that stops by itself at a long red light or in traffic and starts again stays quiet
+    // said once in 15 minutes when the drive starts by itself (stopped at a long red light or in traffic, then moving again
+    // stays quiet); a tap on Drive always says it
     let onAt = 0; try { onAt = +sessionStorage.getItem('za-driveon') || 0; } catch { }
-    if (Date.now() - onAt > 15 * 60e3) { say(withCar ? 'Drive mode on.' : 'Tracking on.'); try { sessionStorage.setItem('za-driveon', String(Date.now())); } catch { } }
+    if (byTap || Date.now() - onAt > 15 * 60e3) { say(withCar ? 'Drive mode on.' : 'Tracking on.'); try { sessionStorage.setItem('za-driveon', String(Date.now())); } catch { } }
     if (!LIVE.on) {
       LIVE.on = true; LIVE.follow = true; LIVE.state = ''; LIVE.cur = null; LIVE.sec = null; LIVE.endAt = null; S.cur = null; LIVE.spoken = {};
       document.body.classList.add('livedrive'); $('driveFab').setAttribute('aria-pressed', 'true'); $('driveLbl').textContent = 'Stop drive';
@@ -3519,8 +3521,8 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   }
 
   // Drive button (floating) and the locate button: both start continuous tracking
-  $('driveFab').onclick = () => { if (LIVE.on) { liveStop(); toast('Drive stopped. Parked? Switch to Parking to check for inspectors nearby.'); } else liveStart(true); };   // in car mode, the ✕ shows the map view; this button ends the drive
-  window.__liveLocate = () => { if (!LIVE.on) liveStart(false); else { LIVE.follow = true; if (LIVE.pos) centreOn(LIVE.pos, true); toast('Following you.'); } };
+  $('driveFab').onclick = () => { if (LIVE.on) { liveStop(); toast('Drive stopped. Parked? Switch to Parking to check for inspectors nearby.'); } else liveStart(true, true); };   // in car mode, the ✕ shows the map view; this button ends the drive
+  window.__liveLocate = () => { if (!LIVE.on) liveStart(false, true); else { LIVE.follow = true; if (LIVE.pos) centreOn(LIVE.pos, true); toast('Following you.'); } };
   map.on('dragstart', () => { if (LIVE.on && LIVE.follow) { LIVE.follow = false; toast('Map stopped following. Tap the locate button to follow again.'); } });
   // the phone drops the screen lock when the app goes to the background: take it again on return
   document.addEventListener('visibilitychange', () => { if (!document.hidden && LIVE.on) { try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { LIVE.wake = l; }).catch(() => { }); } catch { } } });
