@@ -2014,6 +2014,26 @@ html[data-theme="dark"] #navSheet .nvwait.err { color: #ff8a80; }
   html:root #menu { padding-top: calc(env(safe-area-inset-top, 0px) + 44px); }
   html:root #menu .card { height: auto; max-height: 100%; border-radius: 24px 24px 0 0; padding-top: 0; }
 }
+/* ===== Simpler driving screen (11 Nov 2026, feedback: "it looks all over the place") =====
+   The warning card: what it is, the street, one small line (suburb and how risky), the distance on the right.
+   Off the driving screen: the icon tile, the progress bar, the badges, the "cameras ahead" count, the separate distance
+   line above the card, and the 3D button (the map follows you; 3D / 2D is on the map screen when you're not driving). */
+@media (orientation: portrait) and (max-width: 899px) {
+  html:root body.zadrive.carmode #car { padding: calc(env(safe-area-inset-top, 0px) + 2px) 20px 20px; gap: 6px; }
+  html:root body.zadrive.carmode #car .chead { min-height: 40px; }
+  html:root body.zadrive.carmode #car .chead > b { visibility: hidden; }
+  html:root body.zadrive.carmode #car .cnear, html:root body.zadrive.carmode #car .cinfo, html:root body.zadrive.carmode #car .cico { display: none !important; }
+  /* three rows: the warning across the top (clear of the ✕); the street with the distance beside it; suburb and risk */
+  html:root body.zadrive.carmode #car .ccard { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "t t" "s d" "n n"; gap: 6px 16px; align-items: end; }
+  html:root body.zadrive.carmode #car .ctx, html:root body.zadrive.carmode #car .csm { display: contents; }
+  html:root body.zadrive.carmode #car .cbig { grid-area: t; padding-right: 44px; font: 800 1.5625rem/1.12 var(--font-display); }
+  html:root body.zadrive.carmode #car .csm b { grid-area: s; min-width: 0; font: 700 1.375rem/1.15 var(--font-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  html:root body.zadrive.carmode #car .csm small { grid-area: n; font: 600 1rem/1.25 var(--font-body); opacity: .8; }
+  html:root body.zadrive.carmode #car .cdist { grid-area: d; display: block !important; font: 800 2.25rem/1 var(--font-display); font-variant-numeric: tabular-nums; letter-spacing: -.01em; white-space: nowrap; }
+  html:root body.zadrive.carmode #car .cdist:empty { display: none !important; }
+  html:root body.zadrive.carmode #car .cdist small { display: none; }
+  html:root body.zadrive #d3ctl, html:root body.zadrive #aheadChip { display: none !important; }
+}
 
 </style>
 </head>
@@ -5533,49 +5553,30 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
         if (ck && !c.querySelector('.ckinds.hz')) ck.insertAdjacentHTML('afterend', `<p class="hzhead">Road hazard</p><div class="ckinds hz">${hazBtns('data-act="send"')}</div>`);
         sndPlace();
       };
-      // The warning card, bigger and fuller (feedback 6 Nov): the street on its own line with the suburb under it, a bar
-      // that fills as you get closer to a zone, and a row of facts: how risky the spot is, how many cameras are ahead, what's next.
-      // (no bar inside a zone: it started again whenever you turned, and it was one thing too many to read, feedback 10 Nov)
-      const BAR = { key: null, pct: null };
+      // The warning card: the street on its own line, with the suburb and how risky the spot is under it (11 Nov: simpler)
       function cardInfo(c, cc) {
         c.querySelectorAll(':scope > .cnear, :scope > .cinfo').forEach(e => e.remove());   // the card isn't always redrawn: replace, don't add
         if (!(phone() && innerHeight >= innerWidth)) return;
         const z = lastInfo && lastInfo.z, k = (lastInfo && lastInfo.kind) || 'clear';
         const sm = cc.querySelector('.csm');
-        if (z && sm) sm.innerHTML = `<b>${esc(zStreet(z))}</b>${zPlace(z) ? `<small>${esc(zPlace(z))}</small>` : ''}`;
-        const facts = [];
-        if (z && !z.rep && !z.fixed && z.x) {
-          const lv = z.x.type === 'phone' ? 'Phone & seatbelt camera' : z.x.level === 'site' ? 'Approved camera site' : (LEVEL_TEXT[z.x.level] || 'Listed') + ' hotspot';
-          facts.push(`<span class="cf lv lv-${esc(z.x.level || 'site')}"><i aria-hidden="true"></i>${esc(lv)}</span>`);
-        } else if (z && z.fixed && z.x && z.x.note) facts.push(`<span class="cf">${esc(z.x.note)}</span>`);
-        else if (z && z.rep) facts.push(`<span class="cf">Reported by a driver</span>`);
-        const ah = $('aheadChip'), n = ah && !ah.hidden ? (ah.querySelector('.ahn') || {}).textContent : '';
-        if (n && n !== '0') facts.push(`<span class="cf"><b>${esc(n)}</b> camera${n === '1' ? '' : 's'} ahead</span>`);
-        // (no "Then …" pill: it repeated the next camera the card already names, feedback 7 Nov)
-        // The distance, once, along the top of the card (feedback 7 Nov): "Now" in a zone, "350 m" to the zone ahead, or with
-        // the road clear the distance to the next camera (taken out of the line underneath, which then just names it).
-        let near = '', m = null, pct = null;
-        const dEl = cc.querySelector('.cdist'), dt = dEl ? dEl.textContent.trim() : '';
-        let big = '';
-        const inZone = !!z && /here|zone/.test(k);
-        if (dt && z) { big = dEl.innerHTML; if (!inZone) m = /([\d.]+)\s*(k?m)\b/.exec(dt); }
-        else if (!z && sm) {
+        // Simpler card (feedback 11 Nov, "it looks all over the place"): what it is, the street, one small line (suburb and how
+        // risky), and the distance on the right. No icon tile, no bar, no badges, no count of cameras ahead.
+        let note = '';
+        if (z && !z.rep && !z.fixed && z.x) note = z.x.type === 'phone' ? 'Phone & seatbelt camera' : z.x.level === 'site' ? 'Approved camera site' : (LEVEL_TEXT[z.x.level] || 'Listed') + ' hotspot';
+        else if (z && z.rep) note = 'Driver report';
+        if (z && sm) sm.innerHTML = `<b>${esc(zStreet(z))}</b><small>${esc([zPlace(z), note].filter(Boolean).join(' · '))}</small>`;
+        // coming up (not there yet): say so ("Camera zone ahead", "Red light camera ahead"): without the old distance bar
+        // above the card, "Camera zone" alone read as if you were already in it
+        const bigEl = cc.querySelector('.cbig');
+        if (z && /ahead/.test(k) && bigEl && !/ahead/i.test(bigEl.textContent)) bigEl.textContent = bigEl.textContent.trim() + ' ahead';
+        // the road clear: "Next: Princess Street" underneath, its distance on the right
+        const dEl = cc.querySelector('.cdist');
+        if (!z && sm) {
           const nx = /^(Next: .+?) in ([\d.]+)\s*(k?m)\s*$/.exec(sm.textContent.trim());
-          if (nx) { sm.textContent = nx[1]; sm.dataset.short = nx[1]; sm.dataset.n = nx[2]; sm.dataset.u = nx[3]; }
-          if (sm.dataset.n && sm.textContent === sm.dataset.short) { big = `${sm.dataset.n} ${sm.dataset.u}`; m = [null, sm.dataset.n, sm.dataset.u]; }   // the card isn't always redrawn
+          if (nx) { sm.textContent = nx[1]; sm.dataset.short = nx[1]; sm.dataset.d = `${nx[2]} ${nx[3]}`; }
+          if (dEl && !dEl.textContent.trim() && sm.dataset.d && sm.textContent === sm.dataset.short) dEl.textContent = sm.dataset.d;   // the card isn't always redrawn
+          if (!sm.children.length && sm.textContent.trim()) sm.innerHTML = `<b>${esc(sm.textContent.trim())}</b>`;   // its own line (the card's rows)
         }
-        if (m && pct == null) pct = Math.round(Math.max(.04, 1 - Math.min(1, +m[1] * (m[2] === 'km' ? 1000 : 1) / 1000)) * 100);
-        // approaching a zone the bar fills as you get closer (card orange); in the zone there's no bar, just the card
-        const bkey = z ? (z.rep ? 'r' + z.rep.id : z.fixed ? 'f' + z.fixed.i : 'm' + (z.x && z.x.i)) : 'clear';
-        const from = BAR.key === bkey && BAR.pct != null ? BAR.pct : pct;
-        BAR.key = bkey; BAR.pct = pct;
-        if (big) near = `<div class="cnear"><span class="cdist2">${big}</span>${pct != null ? `<div class="cbar" aria-hidden="true"><i style="width:${from}%"></i></div>` : ''}</div>`;
-        if (near) {
-          cc.insertAdjacentHTML('beforebegin', near);
-          const bi = c.querySelector(':scope > .cnear .cbar i');
-          if (bi && from !== pct) { void bi.offsetWidth; bi.style.width = pct + '%'; }
-        }
-        if (facts.length) cc.insertAdjacentHTML('afterend', `<div class="cinfo">${facts.join('')}</div>`);
       }
       // Phone held upright, while driving (Car mode, or tracking with Car mode closed):
       //   top: the warning card (Car mode: edge to edge; tracking: next to the settings button)
