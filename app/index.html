@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en-AU">
-<head>
-<script src="native.js"></script><script>try{localStorage.setItem("za-state","ALL")}catch(e){}</script>
+<head><script>try{localStorage.setItem("za-state","ALL")}catch(e){}</script>
 <meta charset="utf-8">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
@@ -1589,6 +1588,12 @@ body.carmode #siteCard { bottom: calc(124px + env(safe-area-inset-bottom, 0px));
 #setCfg .setgrp { background: var(--surface); border-radius: 18px; padding: 14px; margin: 0; }
 #setCfg .setgrp:has([data-lvl]) { order: 1; } #setCfg .setgrp:has([data-d3detail]) { order: 2; } #setCfg .setgrp:has(.cartype) { order: 3; }
 #setCfg .cartype, #setCfg .carcol { display: none !important; }
+#setCfg #volGrp { order: 1; }
+#volGrp .volrow { display: flex; align-items: center; gap: 10px; margin-top: 10px; min-height: 48px; }
+#volGrp .volrow input { flex: 1 1 auto; min-width: 0; height: 32px; accent-color: var(--accent); }
+#volGrp .volrow output { flex: none; min-width: 3.4em; text-align: right; font: 700 1.0625rem/1 var(--font-num); font-variant-numeric: tabular-nums; }
+#volGrp .volsub { display: block; margin-top: 12px; }
+#volGrp .voltest { width: 100%; min-height: 48px; margin-top: 10px; }
 .carsel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
 .carsel label { display: grid; gap: 6px; font-size: .8125rem; font-weight: 700; color: var(--muted); }
 .carsel select { min-height: 48px; padding: 0 12px; border: 1px solid var(--ctl-line); border-radius: 14px; background: var(--surface-2); color: var(--fg); font: 600 1rem var(--font-body); }
@@ -2636,7 +2641,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     if (!S.voice || quiet()) return;
     try {
       actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-      for (let i = 0; i < n; i++) { const o = actx.createOscillator(), g = actx.createGain(), t0 = actx.currentTime + i * .22; o.frequency.value = n > 1 ? 988 : 784; o.connect(g); g.connect(actx.destination); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(.25, t0 + .02); g.gain.exponentialRampToValueAtTime(.0001, t0 + .18); o.start(t0); o.stop(t0 + .2); }
+      for (let i = 0; i < n; i++) { const o = actx.createOscillator(), g = actx.createGain(), t0 = actx.currentTime + i * .22; o.frequency.value = n > 1 ? 988 : 784; o.connect(g); g.connect(actx.destination); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(.25 * Math.min(2, window.ZA_VOL || 1), t0 + .02); g.gain.exponentialRampToValueAtTime(.0001, t0 + .18); o.start(t0); o.stop(t0 + .2); }
     } catch { }
   }
   // zone ended: two rising notes, softer than the warning beeps so it's easy to tell apart
@@ -2644,7 +2649,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     if (!S.voice || Date.now() < S.muteUntil) return;
     try {
       actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-      [523, 784].forEach((f, i) => { const o = actx.createOscillator(), g = actx.createGain(), t0 = actx.currentTime + i * .16; o.type = 'sine'; o.frequency.value = f; o.connect(g); g.connect(actx.destination); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(.16, t0 + .03); g.gain.exponentialRampToValueAtTime(.0001, t0 + .3); o.start(t0); o.stop(t0 + .32); });
+      [523, 784].forEach((f, i) => { const o = actx.createOscillator(), g = actx.createGain(), t0 = actx.currentTime + i * .16; o.type = 'sine'; o.frequency.value = f; o.connect(g); g.connect(actx.destination); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(.16 * Math.min(2, window.ZA_VOL || 1), t0 + .03); g.gain.exponentialRampToValueAtTime(.0001, t0 + .3); o.start(t0); o.stop(t0 + .32); });
     } catch { }
   }
   // ---- voice: the person's chosen voice, else the most natural-sounding English one on the device ----
@@ -3140,6 +3145,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     if (GEO_LOADED[st] === 'ok' || GEO_LOADED[st] === 'none' || (GEO_LOADED[st] === 'retry' && Date.now() - GEO_RETRY[st] < 60e3)) return Promise.resolve();
     return GEO_WAIT[st] || (GEO_WAIT[st] = new Promise(res => {
       GEO_LOADED[st] = 'loading';
+      mwLoad(st);
       fetch(`geo/${st}.json`).then(r => r.ok ? r.json() : null).then(j => { if (j) { Object.assign(GEO_ALIAS, j._alias || {}); delete j._alias; Object.assign(GEO, j); GEO_LOADED[st] = 'ok'; } else GEO_LOADED[st] = 'none'; })
         .catch(() => { GEO_LOADED[st] = 'retry'; GEO_RETRY[st] = Date.now(); delete GEO_WAIT[st]; }).finally(res);
     }));
@@ -3161,21 +3167,75 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   }
   const streetOf = x => { if (!GEO[x.i]) return null; if (!GEO_LINES.has(x.i)) GEO_LINES.set(x.i, GEO[x.i].map(decodeLine)); return GEO_LINES.get(x.i); };
   // nearest point of the street to p (distance, the street's direction there) and the nearest entry point ahead of us
+  // ===== Freeways (11 Nov 2026): the same check as the phone app's engine (ZoneCore motorwayCheck) =====
+  // On a freeway carriageway (within 15-25 m, running its way, over 40 km/h): only that freeway's cameras count, from the
+  // first GPS fix on it, so a street beside it (Kilby Road beside the Eastern Freeway) or a road above or below it never
+  // sets a warning off, even when the road-name lookup is slow or offline. Lines: geo/mw-<state>.json (make_mways.py).
+  const MW = { lines: [], grid: new Map(), loaded: {} };
+  function mwLoad(st) {
+    if (MW.loaded[st]) return; MW.loaded[st] = 1;
+    fetch(`geo/mw-${st}.json`).then(r => r.ok ? r.json() : null).then(j => {
+      if (!j) return;
+      for (const [name, enc, ref] of j) {
+        const ln = decodeLine(enc), w = MW.lines.length; if (ln.length < 2) continue;
+        MW.lines.push({ name, ref, ln });
+        for (let k = 0; k + 1 < ln.length; k++) {
+          const a = ln[k], b = ln[k + 1], cells = new Set([a, b, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]].map(q => Math.floor(q[0] / .02) + ',' + Math.floor(q[1] / .02)));
+          for (const c of cells) { if (!MW.grid.has(c)) MW.grid.set(c, []); MW.grid.get(c).push([w, k]); }
+        }
+      }
+    }).catch(() => { MW.loaded[st] = 0; });
+  }
+  const STREETW = new Set(['street', 'st', 'road', 'rd', 'avenue', 'ave', 'av', 'highway', 'hwy', 'drive', 'dr', 'parade', 'pde', 'lane', 'ln', 'crescent', 'cres', 'place', 'pl', 'terrace', 'tce', 'boulevard', 'bvd', 'blvd', 'way', 'grove', 'gr', 'close', 'cl', 'court', 'ct', 'esplanade', 'esp', 'circuit', 'cct', 'square', 'sq']);
+  // two carriageways ("name|ref") are the same freeway: the same name, or the same number
+  const sameFw = (a, b) => { const x = (a || '').split('|'), y = (b || '').split('|'); return (!!x[0] && x[0] === y[0]) || (!!x[1] && x[1] === y[1]); };
+  function mwNear(p, H, sameWay) {   // sameWay: only a carriageway running our way (they're drawn the way the traffic goes)
+    let best = null; const c2 = Math.cos(p[0] * RAD) ** 2;
+    for (const [w, k] of MW.grid.get(Math.floor(p[0] / .02) + ',' + Math.floor(p[1] / .02)) || []) {
+      const u = MW.lines[w].ln[k], v = MW.lines[w].ln[k + 1], dh = angDiff(H, bearing(u, v));
+      if (!(dh <= 30 || (!sameWay && dh >= 150))) continue;
+      const den = (v[0] - u[0]) ** 2 + (v[1] - u[1]) ** 2 * c2, t = den > 0 ? Math.max(0, Math.min(1, ((p[0] - u[0]) * (v[0] - u[0]) + (p[1] - u[1]) * (v[1] - u[1]) * c2) / den)) : 0;
+      const d = dist(p, [u[0] + (v[0] - u[0]) * t, u[1] + (v[1] - u[1]) * t]);
+      if (!best || d < best.d) best = { name: MW.lines[w].name + '|' + MW.lines[w].ref, d };
+    }
+    return best;
+  }
+  function mwCheck() {   // once per GPS fix
+    const p = LIVE.pos, H = LIVE.heading, m = p && H != null ? mwNear(p, H) : null;
+    const M = LIVE.mw || (LIVE.mw = { on: null, now: null, inN: 0, outN: 0, name: '' });
+    if (!m || !(m.d <= Math.max(15, Math.min(25, LIVE.acc || 10))) || !(LIVE.speed > 11 || M.on)) { M.now = null; M.inN = 0; if (++M.outN >= 3) M.on = null; return; }
+    M.outN = 0; M.now = m.name;
+    M.inN = m.name === M.name || !M.on ? M.inN + 1 : 1; M.name = m.name;
+    if (M.inN >= 3) M.on = m.name;
+  }
+
   function streetCheck(lines, p, H) {
-    let dmin = Infinity, bmin = 0, ahead = Infinity, tight = Infinity;
+    let dmin = Infinity, bmin = 0, ahead = Infinity, tight = Infinity, qmin = p;
     const c2 = Math.cos(p[0] * RAD) ** 2, along = b => H == null || angDiff(H, b) <= 45 || angDiff(H, b) >= 135;
     for (const ln of lines) for (let k = 0; k + 1 < ln.length; k++) {
       const a = ln[k], b = ln[k + 1], den = (b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2 * c2;
       const t = den ? Math.max(0, Math.min(1, ((p[0] - a[0]) * (b[0] - a[0]) + (p[1] - a[1]) * (b[1] - a[1]) * c2) / den)) : 0;
       const q = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t], dq = dist(p, q), sb = bearing(a, b);
-      if (dq < dmin) { dmin = dq; bmin = sb; }
+      if (dq < dmin) { dmin = dq; bmin = sb; qmin = q; }
       // a stretch of the street lying in front of us and running our way (not a cross street)
-      if (H != null && along(sb)) for (const e of [a, b, q]) {
-        const de = dist(p, e), an = angDiff(H, bearing(p, e)); if (de <= 30 || an >= 40) continue;
-        if (de < ahead) ahead = de;
-        if (de < tight && de * Math.sin(an * RAD) <= 40) tight = de;   // straight ahead of us, not a parallel street off to the side
+      if (H != null && along(sb)) {
+        // how far we are from this stretch's own line, carried on past its ends: near it, the road we're on runs on into the
+        // street (11 Nov: not a parallel road our road bends towards, like Kilby Road beside the Eastern Freeway)
+        const cl = Math.cos(p[0] * RAD), ax = (a[1] - p[1]) * RAD * ER * cl, ay = (a[0] - p[0]) * RAD * ER, bx = (b[1] - p[1]) * RAD * ER * cl, by = (b[0] - p[0]) * RAD * ER;
+        const len = Math.hypot(bx - ax, by - ay), offLine = len > 0 ? Math.abs(ax * by - ay * bx) / len : Infinity;
+        // or, meeting it at an angle, where its line crosses our path ahead: just where the street is
+        const ux = Math.sin(H * RAD), uy = Math.cos(H * RAD), cr = ux * (by - ay) - uy * (bx - ax), meets = Math.abs(cr) > 1e-9 ? (ax * (by - ay) - ay * (bx - ax)) / cr : -1;
+        [a, b, q].forEach(e => {
+          const de = dist(p, e), an = angDiff(H, bearing(p, e)); if (de <= 30 || an >= 40) return;
+          if (de < ahead) ahead = de;
+          // straight ahead of us, not a parallel street off to the side, and in line with us
+          if (de < tight && de * Math.sin(an * RAD) <= 40 && (offLine <= 20 || (meets > 0 && meets <= de + 60))) tight = de;
+        });
       }
     }
+    // the street runs beside us (its nearest point off to the side, within 60 m): it isn't the road ahead, however it bends
+    // further on (11 Nov: a road 30-45 m beside a camera street used to be warned about it)
+    if (H != null && dmin < 60 && angDiff(H, bearing(p, qmin)) > 45) tight = Infinity;
     return { dmin, bmin, ahead, tight, along: along(bmin) };
   }
   // dotted lines along every listed street near you while driving
@@ -3198,6 +3258,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   function liveStart(withCar) {
     if (!navigator.geolocation) { toast('Location isn\'t available in this browser.'); return; }
     if (S.mode) exitSim();
+    LIVE.mw = null;   // freeway check starts afresh
     if (APPMODE.mode === 'park') setMode('cam', true);   // driving always shows the camera view
     // iPhones only allow sound after a tap: unlock speech and the beeper now, inside this tap
     try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume && actx.resume(); } catch { }
@@ -3244,6 +3305,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     liveCar.setLatLng(p); liveAcc.setLatLng(p).setRadius(Math.min(c.accuracy || 10, 300)); loadGeo(p); drawDots();
     const el = liveCar.getElement(); if (el && LIVE.heading != null) el.firstChild.style.transform = `rotate(${LIVE.heading}deg)`;
     if (LIVE.follow) centreOn(p, false);
+    mwCheck();
     lookupRoad();
     liveEval();
   }
@@ -3268,22 +3330,43 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     const p = LIVE.pos, H = LIVE.heading, AHEAD = warnFor(LIVE.speed), kmh = Math.round(LIVE.speed * 3.6);
     const road = LIVE.road ? LIVE.road.split(/;|\//).map(norm).filter(Boolean) : [];
     const onRoadNames = names => road.length && names.some(n => road.some(h => sameName(n, h)));
+    // On a freeway (the phone's own engine says so from the first GPS fix on it, 11 Nov): only its cameras, whatever
+    // the road-name lookup says or doesn't (it can be slow, and then Kilby Road beside the Eastern Freeway got through)
+    const mwName = window.ZA_MWAY || (LIVE.mw && (LIVE.mw.on || LIVE.mw.now));
+    const mway = mwName ? mwName.split('|').map(norm).filter(Boolean) : null;
+    const onMway = names => !mway || names.some(n => mway.some(m => sameName(n, m) || (m.length >= 2 && /^[a-z]{1,2}\d{1,3}$/.test(m) && n.split(' ').includes(m))));
+    // With directions on: only the route's cameras get "ahead" warnings (the road we're on still counts, for a detour)
+    const RO = window.ZA_GUIDING && window.ZA_RO ? window.ZA_RO : null;
     const curKey = LIVE.cur && lKey(LIVE.cur), cands = [], streak = {};
     LIVE.streak = LIVE.streak || {}; const sameFix = LIVE.streakT === LIVE.t; LIVE.streakT = LIVE.t;
+    if (!sameFix || !LIVE.curD) { LIVE.prevD = LIVE.curD || {}; LIVE.curD = {}; }   // each zone street's distance, this fix and the last
     const dLat = .03, dLon = .04;
     for (const x of items) {
       if (x.lat == null || !typeOn[x.type] || Math.abs(x.lat - p[0]) > dLat || Math.abs(x.lon - p[1]) > dLon) continue;
       const q = [x.lat, x.lon], D = dist(p, q); if (D > 3000) continue;
       const ang = H == null ? 0 : angDiff(H, bearing(p, q)), sticky = curKey === (x.type === 'mobile' || x.zone ? 'm' + x.type + '|' + norm(x.street) : 'f' + (x.site ?? x.i));
+      // (a red-light camera named after the freeway is at the ramps' traffic lights, off it: only one on the carriageway counts)
+      if (mway && !sticky && (x.type === 'redlight' || !onMway(x.type === 'mobile' || x.zone ? [norm(x.street), ...aliasesOf(x.street)] : roadNames({ fixed: x }).filter(n => !/\bramp\b/.test(n))))) {
+        // a camera on this very carriageway counts whatever its title calls it ("Domain Tunnel" on CityLink), unless its title
+        // names another street (William Street, right above the Cross City Tunnel)
+        const other = roadNames({ fixed: x }).some(n => STREETW.has(n.split(' ').pop()) && !onMway([n]));
+        const m = x.type !== 'mobile' && !x.zone && H != null && !other ? mwNear([x.lat, x.lon], H, true) : null;
+        if (!m || !sameFw(m.name, mwName) || m.d > 25) continue;
+      }
       if (x.type === 'mobile' || x.zone) {
         const lines = streetOf(x);
         if (lines) {   // whole street: in the zone anywhere along it; warned when it lies ahead running our way
           const sc = streetCheck(lines, p, H), nameOk = onRoadNames([norm(x.street), ...aliasesOf(x.street)]);
           if (road.length && !nameOk) continue;                     // a different road that happens to run close by (frontage road, overpass)
-          const k = 'm' + x.type + '|' + norm(x.street), onIt = sc.dmin <= (sticky ? 60 : 35) && (sc.along || nameOk);
+          // in it: within 25 m (35 m when the road's name agrees), so a road 30-45 m beside it isn't
+          const wasIn = sticky && !!(LIVE.cur && LIVE.cur.here);   // the wide 60 m only once actually in it (not after "ahead")
+          const k = 'm' + x.type + '|' + norm(x.street), onIt = sc.dmin <= (wasIn ? 60 : nameOk ? 35 : 25) && (sc.along || nameOk);
           // on it for two fixes in a row (or the road name agrees), so brushing past at a junction doesn't count
           streak[k] = onIt ? (sameFix ? LIVE.streak[k] || 1 : (LIVE.streak[k] || 0) + 1) : 0;   // counted once per GPS fix
-          if (onIt && (nameOk || sticky || streak[k] >= 2)) cands.push({ x, here: true, start: 0, end: 50 });
+          // in it: the road's name agrees, or two fixes on it in a row together averaging within 20 m (11 Nov: GPS wobble on a
+          // road 30 m beside it used to bring that within 25 m now and then); once in, it stays through bends
+          const prevD = LIVE.prevD[k]; LIVE.curD[k] = Math.min(LIVE.curD[k] ?? Infinity, sc.dmin);
+          if (onIt && (nameOk || wasIn || (sticky && sc.dmin <= 15) || (streak[k] >= 2 && prevD != null && (sc.dmin + prevD) / 2 <= 20))) cands.push({ x, here: true, start: 0, end: 50 });
           else { const st = nameOk || sticky ? sc.ahead : sc.tight; if (st <= WARN_MAX + 50) cands.push({ x, here: false, start: st, end: st + 50 }); }
           continue;
         }
@@ -3293,7 +3376,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
         else if (ang < (sticky ? 110 : 75) && D - R <= WARN_MAX + 50) cands.push({ x, here: false, start: D - R, end: D + R });   // once warned, bends in the road don't cancel it
       } else {
         const names = roadNames({ fixed: x });
-        if (road.length ? names.length && !onRoadNames(names) : ang > 25) continue;     // a camera on a side street or overpass
+        if (road.length ? names.length && !onRoadNames(names) : ang > 25 || (D > 25 && D * Math.sin(ang * RAD) > 30)) continue;     // a camera on a side street or overpass
         if (x.dirs && x.dirs.length && H != null && !x.dirs.some(([b, tol]) => angDiff(H, b) <= tol)) continue;   // faces the other way
         if (D <= 45 + (sticky ? 15 : 0) && (ang < 100 || D < 25)) cands.push({ x, fixed: x, here: true, start: 0, end: 25 });
         else if (ang < (sticky ? 70 : 35) && D <= WARN_MAX + 50) cands.push({ x, fixed: x, here: false, start: D, end: D + 25 });
@@ -3308,6 +3391,13 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
       else if (ang < 40) cands.push({ rep: r, x: { street: r.street, suburb: '', level: 'report' }, here: false, start: D, end: D + 80 });
     }
     LIVE.streak = streak; provenCands(p, H, road, onRoadNames, cands);
+    for (let j = cands.length - 1; j >= 0; j--) {
+      const z = cands[j]; if (z.rep || lKey(z) === curKey) continue;
+      // proven hotspots on a freeway: its own only
+      if (z.proven && mway && !onMway([norm(z.proven.street), ...aliasesOf(z.proven.street)])) { cands.splice(j, 1); continue; }
+      // directions on: a camera off the route is only warned about once we're actually on it, or on its road
+      if (RO && !z.here && !(z.proven ? RO.prov.has(z.proven) : RO.sites.has(z.x.i)) && !onRoadNames(roadNames(z))) cands.splice(j, 1);
+    }
     cands.sort((a, b) => a.start - b.start);
     const seen = new Set();
     const uniq = cands.filter(z => { const k = lKey(z); if (seen.has(k)) return false; seen.add(k); return true; });
@@ -4463,9 +4553,11 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   // ---------- v18: quality of life ----------
   // Settings, alert levels, speed limits in camera zones, "Still there?" on reports, trip check with Home / Work,
   // auto-start from a link (iPhone Shortcuts), parking timer when a drive ends in a sensor bay, offline, first-launch intro.
-  const QOL = { alerts: 'all', limit: 'zones', places: {}, intro: false };
+  const QOL = { alerts: 'all', limit: 'zones', places: {}, intro: false, vol: 100, music: 'duck' };
   try { Object.assign(QOL, JSON.parse(localStorage.getItem('za-qol') || '{}')); } catch { }
-  const qolSave = () => { try { localStorage.setItem('za-qol', JSON.stringify(QOL)); } catch { } };
+  // (the phone app's drive engine reads the same settings: native.js listens for za-settings)
+  const qolSave = () => { try { localStorage.setItem('za-qol', JSON.stringify(QOL)); } catch { } window.ZA_VOL = (QOL.vol || 100) / 100; try { window.dispatchEvent(new Event('za-settings')); } catch { } };
+  window.ZA_VOL = (QOL.vol || 100) / 100;
   const QS = new URLSearchParams(location.search), HASH = location.hash.replace(/^#/, '');
   const AUTO = QS.has('drive') || HASH === 'drive' ? 'drive' : QS.get('mode') === 'park' || HASH === 'park' ? 'park' : QS.get('trip') || (/^trip-(home|work)$/.test(HASH) ? HASH.slice(5) : '');
   const mk = (tag, attrs, html) => { const e = document.createElement(tag); Object.assign(e, attrs || {}); if (html != null) e.innerHTML = html; return e; };
@@ -4808,6 +4900,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     const c = $('setCfg'), P = QOL.places;
     const pl = k => P[k] ? `<span>${esc(P[k].label)}</span><button class="btn" type="button" data-clear="${k}">Forget</button>` : '<span class="sub">Not set. Use Plan a trip, then Save.</span><span></span>';
     c.innerHTML = `<div class="setgrp"><b>Alerts</b><div class="rate" role="group" aria-label="Alert level">${Object.entries(LEVELS).map(([k, v]) => `<button type="button" data-lvl="${k}" aria-pressed="${QOL.alerts === k}">${v[0]}</button>`).join('')}</div><p class="sub">${LEVELS[QOL.alerts][1]}</p></div>
+      ${volHtml()}
       <div class="setgrp"><b>Speed limit in camera zones</b><div class="rate" role="group" aria-label="Speed limit warning"><button type="button" data-limit="zones" aria-pressed="${QOL.limit !== 'off'}">Show + chime</button><button type="button" data-limit="off" aria-pressed="${QOL.limit === 'off'}">Off</button></div>
         <p class="sub">Shows the limit inside camera zones and gives three soft notes if you're over it. Limits come from OpenStreetMap and can be out of date: the signs always win. School-zone times are included where mapped.</p></div>
       ${carPickHtml()}
@@ -4822,6 +4915,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
         <p class="sub">Keeps the app, every camera list, whole-street shapes and speed limits on this phone, so alerts keep working with no signal (regional drives). Map tiles you've already looked at are kept too. Road names, live reports and the 3D view need a connection.</p></div>
       <div class="setgrp"><button class="btn" type="button" id="introAgain">Show the intro again</button></div>`;
     c.querySelectorAll('[data-lvl]').forEach(b => b.onclick = () => { QOL.alerts = b.dataset.lvl; qolSave(); setDraw(); toast(`Alerts: ${LEVELS[QOL.alerts][0]}.`); });
+    volWire(c);
     carPickWire(c);
     d3DetailWire(c);
     c.querySelectorAll('[data-limit]').forEach(b => b.onclick = () => { QOL.limit = b.dataset.limit; qolSave(); setDraw(); });
@@ -4831,8 +4925,32 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     offStatus();
   }
 
+  // ===== Warning volume (11 Nov: warnings were hard to hear over Spotify) =====
+  // In the phone app: the voice up to 200% (boosted past the phone's own maximum, with a limiter so it doesn't crackle), and
+  // the music lowered or paused while a warning plays. On the website: the beeps only (a web page can't boost its voice).
+  const IN_APP = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+  function volHtml() {
+    const v = QOL.vol || 100;
+    return `<div class="setgrp" id="volGrp"><b>Warning volume</b>
+      <div class="volrow"><span aria-hidden="true">🔈</span><input type="range" id="volR" min="50" max="200" step="10" value="${v}" aria-label="Warning volume" aria-valuetext="${v}%"><span aria-hidden="true">🔊</span><output id="volOut" for="volR">${v}%</output></div>
+      <p class="sub">${IN_APP ? 'Above 100% the voice is boosted past your phone\'s normal level. Your phone\'s own volume buttons still set the overall level.' : 'Sets the beeps. The voice follows your phone\'s volume (the phone app can boost it further).'}</p>
+      ${IN_APP ? `<b class="volsub">While a warning plays</b><div class="rate" role="group" aria-label="Music while a warning plays"><button type="button" data-music="duck" aria-pressed="${QOL.music !== 'pause'}">Lower the music</button><button type="button" data-music="pause" aria-pressed="${QOL.music === 'pause'}">Pause the music</button></div>
+      <p class="sub">${QOL.music === 'pause' ? 'Spotify and other music pause for each warning, then carry on.' : 'Music gets quieter for each warning. Choose Pause if warnings are still hard to hear.'} During a phone call your phone keeps the call's sound first, so warnings show on screen and in CarPlay or Android Auto.</p>` : ''}
+      <button class="btn voltest" type="button" id="volTest">Play a test warning</button></div>`;
+  }
+  function volWire(c) {
+    const r = c.querySelector('#volR'); if (!r) return;
+    r.oninput = () => { c.querySelector('#volOut').textContent = r.value + '%'; r.setAttribute('aria-valuetext', r.value + '%'); };
+    r.onchange = () => { QOL.vol = +r.value; qolSave(); };
+    c.querySelectorAll('[data-music]').forEach(b => b.onclick = () => { QOL.music = b.dataset.music; qolSave(); setDraw(); });
+    c.querySelector('#volTest').onclick = () => {
+      QOL.vol = +r.value; qolSave();
+      const was = S.voice; S.voice = true; chime0(1); setTimeout(() => { say0('Possible camera zone ahead. Kilby Road, in 300 metres.'); S.voice = was; }, 350);
+    };
+  }
+
   // ===== Offline: a service worker keeps the app and its data on the phone =====
-  const OFF_FILES = ['VIC', 'NSW', 'QLD', 'SA'].flatMap(s => [`geo/${s}.json`, `geo/lim-${s}.json`]).concat(['geo/lim-ACT.json', 'geo/lim-fixed.json', 'geo/parking-mel.json']);
+  const OFF_FILES = ['VIC', 'NSW', 'QLD', 'SA'].flatMap(s => [`geo/${s}.json`, `geo/lim-${s}.json`, `geo/mw-${s}.json`]).concat(['geo/lim-ACT.json', 'geo/lim-fixed.json', 'geo/parking-mel.json']);
   const swOK = 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
   if (swOK) navigator.serviceWorker.register('sw.js').then(() => offStatus()).catch(() => { });
   async function offStatus() {
@@ -5895,17 +6013,20 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
       GEO_LINES.set = (k, v) => { try { v = zaAlign(zaChain(v)); } catch (e) { } return set0(k, v); };
     }
   }
-  // ===== Directions (iPhone app only, 8 Nov 2026) =====
+  // ===== Directions (iPhone and Android apps, 8 and 10 Nov 2026) =====
   // Out of the way on purpose: most drivers navigate with Waze or Google Maps and keep Zone Ahead for the cameras.
   //   Start:  Settings › Directions › "Navigate to…", or press and hold a spot on the map › "Navigate here".
   //   Then:   one slim line on the warning card (turn, distance, the instruction, arrival time, End). Camera warnings stay
   //           first: the card is unchanged and a turn prompt never talks over a camera warning.
-  // Apple Maps finds the places and plans the route; the iPhone follows it (NavEngine.swift, plugin ZoneAheadNav). Without
-  // the plugin (the website, Android) none of this shows.
+  // iPhone: Apple Maps finds the places and plans the route; the iPhone follows it (NavEngine.swift, plugin ZoneAheadNav).
+  // Android: the phone's address search and an OpenStreetMap router do the same (NavEngine.kt, the same plugin name).
+  // Without the plugin (the website) none of this shows.
   {
     const CAP = window.Capacitor;
     const NV = CAP && CAP.isNativePlatform && CAP.isNativePlatform() && CAP.Plugins ? CAP.Plugins.ZoneAheadNav : null;
     if (NV) {
+      // who the directions come from (shown under the search and in Settings)
+      const MAPS = CAP.getPlatform && CAP.getPlatform() === 'android' ? 'OpenStreetMap' : 'Apple Maps';
       const NAV = { st: null, line: null, prev: null, dest: null, seq: 0, sayT: 0, sig: '' };
       const B = document.body;
       const SV = (d, w = 24) => `<svg viewBox="0 0 24 24" width="${w}" height="${w}" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
@@ -6078,7 +6199,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
         <div class="nvfind"><span aria-hidden="true">${FIND_SVG}</span><input id="navQ" type="search" placeholder="Search a place or address" autocomplete="off" autocorrect="off" enterkeyhint="search" aria-label="Search a place or address"></div>
         <ul class="nvres" id="navRes" aria-live="polite"></ul>
         <div class="nvplan" id="navPlan" hidden aria-live="polite"></div>
-        <p class="nvnote">Directions by Apple Maps. Camera warnings always come first.</p></div>`;
+        <p class="nvnote">Directions by ${MAPS}${MAPS === 'OpenStreetMap' ? ' (© OpenStreetMap contributors)' : ''}. Camera warnings always come first.</p></div>`;
       B.appendChild(sh);
       const q = sh.querySelector('#navQ'), res = sh.querySelector('#navRes'), plan = sh.querySelector('#navPlan');
       function sheetOpen(dest) {
@@ -6196,7 +6317,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
       function cfgGrp() {
         if (!cfg || cfg.querySelector('#navGrp')) return;
         cfg.insertAdjacentHTML('afterbegin', `<div class="setgrp" id="navGrp"><b>Directions</b><button class="btn nvopen" type="button" id="navOpen">${FIND_SVG}<span>Navigate to…</span></button>
-          <p class="sub">Turn-by-turn directions from Apple Maps, with your camera warnings on the way. You can also press and hold a spot on the map.</p></div>`);
+          <p class="sub">Turn-by-turn directions from ${MAPS}, with your camera warnings on the way. You can also press and hold a spot on the map.</p></div>`);
         cfg.querySelector('#navOpen').onclick = () => { $('menuDone').click(); setTimeout(() => sheetOpen(), 250); };
       }
       if (cfg) { new MutationObserver(cfgGrp).observe(cfg, { childList: true }); cfgGrp(); }
@@ -6259,6 +6380,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
       function onNav(e) {
         const was = !!NAV.st;
         NAV.st = e && e.active ? e : null;
+        window.ZA_GUIDING = !!(NAV.st && NAV.st.phase !== 'arrived');   // the page's own warnings: route cameras only (template liveEval)
         if (NAV.st && e.line) { NAV.line = e.line; NAV.src = { line: e.line, stepAt: e.stepAt, stepText: e.stepText }; }
         if (!NAV.st) { NAV.line = null; NAV.src = null; }
         if (e && e.line || was !== !!NAV.st) drawLine();

@@ -56,7 +56,7 @@ window.ZA_NOTICES_URL = 'https://zoneahead.github.io/zone-ahead-notices/notices.
   if (document.body) start(); else document.addEventListener('DOMContentLoaded', start);
 })();
 
-// CarPlay: send what the Car mode card shows to the car screen, and carry out its report buttons.
+// CarPlay and Android Auto: send what the Car mode card shows to the car screen, and carry out its report buttons.
 (function () {
   var C = window.Capacitor;
   if (!C || !C.isNativePlatform || !C.isNativePlatform()) return;
@@ -99,14 +99,16 @@ window.ZA_NOTICES_URL = 'https://zoneahead.github.io/zone-ahead-notices/notices.
   });
 })();
 
-// iPhone: the app's voice goes through the drive engine (DriveEngine.swift) instead of the web view's own voice, which
-// didn't play through the car's speakers in CarPlay (feedback 8 Nov). The engine says it as a voice prompt, the way a
-// navigation app does, so CarPlay plays it even with the radio on. Same speechSynthesis the page already uses.
+// iPhone and Android: the app's voice goes through the drive engine (DriveEngine.swift / DriveEngine.kt) instead of the
+// web view's own voice, which didn't play through the car's speakers in CarPlay (feedback 8 Nov) and doesn't exist at all
+// in Android's web view. The engine says it as a voice prompt, the way a navigation app does, so CarPlay and Android Auto
+// play it even with the radio on. Same speechSynthesis the page already uses.
 (function () {
   var C = window.Capacitor;
-  if (!C || !C.isNativePlatform || !C.isNativePlatform() || !C.getPlatform || C.getPlatform() !== 'ios') return;
+  if (!C || !C.isNativePlatform || !C.isNativePlatform()) return;
   var D = C.Plugins && C.Plugins.ZoneAheadDrive;
   if (!D || !D.speak) return;
+  window.ZA_ENGINE_VOICE = true;
   if (typeof window.SpeechSynthesisUtterance !== 'function') {
     window.SpeechSynthesisUtterance = function (text) { this.text = text || ''; this.lang = 'en-AU'; this.rate = 1; this.pitch = 1; this.volume = 1; };
   }
@@ -133,10 +135,11 @@ window.ZA_NOTICES_URL = 'https://zoneahead.github.io/zone-ahead-notices/notices.
   try { Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true }); } catch (e) { }
 })();
 
-// Android: its web view has no built-in voice, so the app's voice warnings use the phone's text-to-speech engine.
+// Android without the drive engine (the first Android build): its web view has no built-in voice, so the app's voice
+// warnings use the phone's text-to-speech plugin.
 (function () {
   var C = window.Capacitor;
-  if (!C || !C.isNativePlatform || !C.isNativePlatform() || !C.getPlatform || C.getPlatform() !== 'android') return;
+  if (window.ZA_ENGINE_VOICE || !C || !C.isNativePlatform || !C.isNativePlatform() || !C.getPlatform || C.getPlatform() !== 'android') return;
   var T = C.Plugins && C.Plugins.TextToSpeech;
   if (!T) return;
   if (typeof window.SpeechSynthesisUtterance !== 'function') {
@@ -243,19 +246,22 @@ window.ZA_PUSH = false;
   }).catch(noop);
 })();
 
-// Native drive engine (iPhone, DriveEngine.swift): keeps warning with the screen off or another app open.
-// It runs alongside each real drive (not the simulator) and speaks only while Zone Ahead is in the background;
+// Native drive engine (iPhone: DriveEngine.swift, Android: DriveEngine.kt): keeps warning with the screen off or another
+// app open. It runs alongside each real drive (not the simulator) and speaks only while Zone Ahead is in the background;
 // on screen, the web app shows and says everything as before. It follows the sound button (voice / beeps / off).
 (function () {
   var C = window.Capacitor;
-  if (!C || !C.isNativePlatform || !C.isNativePlatform() || !C.getPlatform || C.getPlatform() !== 'ios') return;
+  if (!C || !C.isNativePlatform || !C.isNativePlatform()) return;
   var D = C.Plugins && C.Plugins.ZoneAheadDrive;
-  if (!D) return;
+  if (!D || !D.start) return;
+  var ANDROID = !!(C.getPlatform && C.getPlatform() === 'android');
+  var ALWAYS = ANDROID ? 'Allow all the time' : 'Always';
   var on = false;
   function opts() {
-    var s = document.getElementById('sndBtn'), r = 0, a = 'all';
-    try { r = +localStorage.getItem('za-zoneR') || 0; a = (JSON.parse(localStorage.getItem('za-qol') || '{}').alerts) || 'all'; } catch (e) { }
-    return { sound: (s && s.dataset.s) || 'on', zoneR: r || 700, alerts: a };   // alerts: the Settings "Alerts" choice (all / important / beeps)
+    var s = document.getElementById('sndBtn'), r = 0, q = {};
+    try { r = +localStorage.getItem('za-zoneR') || 0; q = JSON.parse(localStorage.getItem('za-qol') || '{}') || {}; } catch (e) { }
+    // alerts: the Settings "Alerts" choice (all / important / beeps); volume 0.5-2 and music (duck / pause): "Warning volume"
+    return { sound: (s && s.dataset.s) || 'on', zoneR: r || 700, alerts: q.alerts || 'all', volume: (+q.vol || 100) / 100, music: q.music === 'pause' ? 'pause' : 'duck' };
   }
   function sync() {
     var live = document.body.classList.contains('livedrive');
@@ -273,6 +279,7 @@ window.ZA_PUSH = false;
     new MutationObserver(sync).observe(document.body, { attributes: true, attributeFilter: ['class'] });
     var s = document.getElementById('sndBtn');
     if (s) new MutationObserver(conf).observe(s, { attributes: true, attributeFilter: ['data-s'] });
+    window.addEventListener('za-settings', conf);   // Settings: alerts, warning volume, music
     // the Alerts setting (Everything / Important only / Beeps only) is saved when tapped
     document.addEventListener('click', function (e) { if (e.target.closest && e.target.closest('[data-lvl]')) setTimeout(conf, 50); });
     // back on screen: the engine stops itself after a while parked in the background, so start it again if this drive is
@@ -300,10 +307,10 @@ window.ZA_PUSH = false;
     var S = { on: false, auth: 'notDetermined', ready: false, asked: false };
     function html() {
       var note, warn = false, btn = '';
-      if (!S.on) note = 'Drive mode turns on by itself when you start driving, even with the app closed: camera warnings by voice and on the lock screen. It needs location set to <b>Always</b>. Uses little battery: the phone only checks properly after you\'ve moved about 500 m.';
+      if (!S.on) note = 'Drive mode turns on by itself when you start driving, even with the app closed: camera warnings by voice and on the lock screen. It needs location set to <b>' + ALWAYS + '</b>' + (ANDROID ? ' and <b>Physical activity</b> allowed (how the phone knows it\'s in a car)' : '') + '. Uses little battery: the phone only checks properly ' + (ANDROID ? 'once it senses you\'re in a vehicle.' : 'after you\'ve moved about 500 m.');
       else if (S.ready) note = 'On. When you start driving, Zone Ahead switches itself on and you\'ll get a notification. It ends by itself 5 minutes after you park.';
-      else if (S.auth === 'denied' || S.asked) { warn = true; note = 'Needs location set to Always: Settings › Zone Ahead › Location › Always.'; btn = '<button class="btn zaset" type="button" id="zaAutoSet">Open Settings</button>'; }
-      else note = 'Waiting for location permission: choose <b>Change to Always Allow</b> when your iPhone asks.';
+      else if (S.auth === 'denied' || S.asked) { warn = true; note = ANDROID ? 'Needs location set to "Allow all the time" and Physical activity allowed: Open Settings › Permissions.' : 'Needs location set to Always: Settings › Zone Ahead › Location › Always.'; btn = '<button class="btn zaset" type="button" id="zaAutoSet">Open Settings</button>'; }
+      else note = ANDROID ? 'Waiting for permission: allow <b>Physical activity</b>, then choose <b>Allow all the time</b> for location when your phone asks.' : 'Waiting for location permission: choose <b>Change to Always Allow</b> when your iPhone asks.';
       return '<b>Start by itself when you drive</b><button class="zasw" type="button" id="zaAuto" aria-pressed="' + S.on + '"><span>Turn on Drive mode when I start driving</span><i class="sw" aria-hidden="true"></i></button><p class="zanote' + (warn ? ' warn' : '') + '">' + note + '</p>' + btn;
     }
     function draw() {
@@ -328,7 +335,18 @@ window.ZA_PUSH = false;
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
 
-// Web code updates (WebUpdater.swift): tell the app this version started fine, so it keeps it (a version that never says so
+// The freeway we're on, from the phone's own engine (11 Nov): the page's warnings then count only that freeway's cameras,
+// from the first GPS fix on it (window.ZA_MWAY, "Eastern Freeway|M3"; read by the template's liveEval).
+(function () {
+  var C = window.Capacitor;
+  if (!C || !C.isNativePlatform || !C.isNativePlatform()) return;
+  var D = C.Plugins && C.Plugins.ZoneAheadDrive;
+  if (!D || !D.addListener) return;
+  window.ZA_MWAY = null;
+  D.addListener('road', function (r) { window.ZA_MWAY = r && r.motorway ? r.motorway : null; });
+})();
+
+// Web code updates (WebUpdater.swift / WebUpdater.kt): tell the app this version started fine, so it keeps it (a version that never says so
 // is dropped next time the app opens). The app then looks for a newer one in the background.
 (function () {
   var C = window.Capacitor;
