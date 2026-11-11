@@ -3262,7 +3262,9 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     if (APPMODE.mode === 'park') setMode('cam', true);   // driving always shows the camera view
     // iPhones only allow sound after a tap: unlock speech and the beeper now, inside this tap
     try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); actx.resume && actx.resume(); } catch { }
-    say(withCar ? 'Drive mode on.' : 'Tracking on.');
+    // said once in 15 minutes: a drive that stops by itself at a long red light or in traffic and starts again stays quiet
+    let onAt = 0; try { onAt = +sessionStorage.getItem('za-driveon') || 0; } catch { }
+    if (Date.now() - onAt > 15 * 60e3) { say(withCar ? 'Drive mode on.' : 'Tracking on.'); try { sessionStorage.setItem('za-driveon', String(Date.now())); } catch { } }
     if (!LIVE.on) {
       LIVE.on = true; LIVE.follow = true; LIVE.state = ''; LIVE.cur = null; LIVE.sec = null; LIVE.endAt = null; S.cur = null; LIVE.spoken = {};
       document.body.classList.add('livedrive'); $('driveFab').setAttribute('aria-pressed', 'true'); $('driveLbl').textContent = 'Stop drive';
@@ -3301,7 +3303,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     else if (LIVE.prevPos && dist(LIVE.prevPos, p) > 10) LIVE.heading = bearing(LIVE.prevPos, p);
     if (!LIVE.prevPos || dist(LIVE.prevPos, p) > 10) LIVE.prevPos = p;
     if (LIVE.sec && prev && step < 500) LIVE.sec.dist += step;
-    LIVE.pos = p; LIVE.acc = c.accuracy; LIVE.lastFix = now; LIVE.t = now; LIVE.moved += step;
+    LIVE.pos = p; LIVE.acc = c.accuracy; LIVE.lastFix = now; LIVE.t = now; LIVE.moved += step; ONCE.add(step);
     liveCar.setLatLng(p); liveAcc.setLatLng(p).setRadius(Math.min(c.accuracy || 10, 300)); loadGeo(p); drawDots();
     const el = liveCar.getElement(); if (el && LIVE.heading != null) el.firstChild.style.transform = `rotate(${LIVE.heading}deg)`;
     if (LIVE.follow) centreOn(p, false);
@@ -3323,6 +3325,51 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
       else if (w) { LIVE.road = ''; LIVE.roadAt = p; }
     } catch { }
     LIVE.looking = false; liveEval();
+  }
+
+  // ===== Each warning said once (11 Nov 2026; the same rule as the phone app's engine, ZoneCore.swift SpeechOnce) =====
+  // For each camera, zone, report, proven stretch and average-speed section: at most one "ahead", one "here" (in it, at
+  // it) and one "ended" prompt per pass, and never "ahead" again once "here" has been said. A pass ends only after 2 km
+  // and 2 minutes of driving with it not current (or 20 minutes away): GPS wobble, a long zone, a U-turn, a stop at the lights, the drive
+  // stopping and starting again, or a reload never repeat a warning. The beep goes with the words: no words, no beep.
+  // In the iPhone app the drive engine keeps the same record for its own warnings (in the background), so the page asks
+  // it too (ZoneAheadDrive.once, set up by native.js as window.ZA_ONCE) before saying a camera or zone warning.
+  const ONCE = (() => {
+    let e = {}, odo = 0, saveT = 0;
+    try { const s = JSON.parse(sessionStorage.getItem('za-once') || 'null'); if (s && s.e) { e = s.e; odo = +s.odo || 0; } } catch { }
+    const save = () => { try { sessionStorage.setItem('za-once', JSON.stringify({ e, odo })); } catch { } };
+    const PASS_M = 2000, PASS_MS = 120e3, IDLE_MS = 1200e3;   // (20 min away, e.g. parked overnight on its street: a new pass)
+    const spot = id => { const m = /^f:(\w):(-?[\d.]+),(-?[\d.]+)$/.exec(id); return m && { k: m[1], p: [+m[2], +m[3]] }; };
+    const find = id => { if (e[id]) return id; const f = spot(id); if (!f) return null; for (const k in e) { const g = spot(k); if (g && g.k === f.k && dist(g.p, f.p) <= 60) return k; } return null; };
+    const expired = (x, now) => (odo - x.odo >= PASS_M && now - x.t >= PASS_MS) || now - x.t >= IDLE_MS;
+    return {
+      add(m) { if (m > 0 && m < 1000) odo += m; },
+      active(id) {
+        const k = id && find(id); if (!k) return; const now = Date.now();
+        if (expired(e[k], now)) delete e[k]; else { e[k].odo = odo; e[k].t = now; }
+        if (now - saveT > 3000) { saveT = now; save(); }
+      },
+      allow(tag) {
+        const i = tag.indexOf('|'); if (i < 0) return true;
+        const ph = tag.slice(0, i), id = tag.slice(i + 1), now = Date.now();
+        let k = find(id); if (k && expired(e[k], now)) { delete e[k]; k = null; }
+        const x = e[k || id] || (e[id] = { ph: [], odo, t: now });
+        if (x.ph.includes(ph) || (ph === 'ahead' && x.ph.includes('here'))) return false;
+        x.ph.push(ph); x.odo = odo; x.t = now;
+        const ks = Object.keys(e); if (ks.length > 400) for (const q of ks) if (expired(e[q], now)) delete e[q];
+        save(); return true;
+      },
+    };
+  })();
+  const ONCE_K = { mobile: 'm', speed: 's', redlight: 'r', p2p: 'a', phone: 'p' };
+  const onceSquash = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  // the camera as the phone app's engine knows it (Site.onceId): a zone by its street, a fixed camera by its spot
+  const onceId = z => !z ? null : z.rep ? 'r:' + z.rep.id : z.fixed ? 'f:' + (ONCE_K[z.x.type] || z.x.type) + ':' + z.x.lat.toFixed(5) + ',' + z.x.lon.toFixed(5)
+    : 'z:' + (ONCE_K[z.x.type] || z.x.type) + ':' + onceSquash(z.x.street);
+  // say (and beep) once: `fn` runs only if this hasn't been said this pass, here or by the phone app's engine
+  function onceSay(tag, fn) {
+    if (!tag || !ONCE.allow(tag)) return;
+    if (window.ZA_ONCE && /\|[zf]:/.test(tag)) window.ZA_ONCE(tag).then(ok => { if (ok) fn(); }, () => fn()); else fn();
   }
 
   function liveEval() {
@@ -3423,32 +3470,31 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     carUpdate({ kind, z, metres, kmh, sec: sec ? { name: sec.name, heavy: sec.heavy, ends: false } : null, avg, ended });
 
     const st = kind + (z ? ':' + lKey(z) : '') + (ended ? ':ended' : '') + (z && z.onStretch ? ':s' : '');
+    const zid = onceId(z); if (zid) ONCE.active(zid);                                         // still current: the same pass
+    if (sec) ONCE.active('sec:' + sec.group);
     if (st === LIVE.state) return;
-    const prev = LIVE.state; LIVE.state = st;
+    const prev = LIVE.state, prevId = LIVE.onceId; LIVE.state = st; if (zid) LIVE.onceId = zid;
     const wasHere = /^(zone|rephere|fixhere)/.test(prev), isHere = /^(zone|rephere|fixhere)/.test(kind);
     if (wasHere && !isHere) {
       LIVE.endAt = LIVE.moved; S.endWord = prev.startsWith('fixhere') ? 'Camera passed' : 'Zone ended'; S.endName = LIVE.endName || '';
-      if (kind === 'clear') { endTone(); if (prev.startsWith('zone')) say('Camera zone ended.'); }
+      if (kind === 'clear' && prevId) onceSay('end|' + prevId, () => { endTone(); if (prev.startsWith('zone')) say('Camera zone ended.'); });
     }
     if (z) LIVE.endName = z.rep ? KIND[z.rep.kind].name + ' report' : z.x.street;
     if (kind === 'fixhere' && z.fixed.type === 'p2p' && z.fixed.group) {
       if (sec && sec.group === z.fixed.group && sec.key !== lKey(z)) {
-        const a = Math.round(sec.dist / Math.max(1, (LIVE.t - sec.t0) / 1000) * 3.6); LIVE.sec = null; chime(2); say(`Average speed section ends. Your average was ${a} kilometres an hour.`); return;
+        const a = Math.round(sec.dist / Math.max(1, (LIVE.t - sec.t0) / 1000) * 3.6); LIVE.sec = null;
+        onceSay('end|sec:' + sec.group, () => { chime(2); say(`Average speed section ends. Your average was ${a} kilometres an hour.`); }); return;
       }
       if (!sec) LIVE.sec = { group: z.fixed.group, key: lKey(z), name: z.fixed.street.split(':')[0], t0: LIVE.t, dist: 0, heavy: /heavy vehicles only/i.test(z.fixed.note) };
     }
-    // don't repeat the same spoken warning within 800 m of driving (winding roads, or a zone you just left)
-    const sk = kind + (z ? lKey(z) : '') + (z && z.onStretch ? ':s' : ''); LIVE.spoken = LIVE.spoken || {};
-    if (z && LIVE.spoken[sk] != null && LIVE.moved - LIVE.spoken[sk] < 800) return;
-    if (z) LIVE.spoken[sk] = LIVE.moved;
     const in100 = Math.round((z ? z.start : 0) / 100) * 100, inM = in100 >= 150 ? `, in ${in100} metres` : '';
-    if (kind === 'rephere') { chime(2); say(`${KIND[z.rep.kind].name} reported here.`); }
-    else if (kind === 'fixhere') { chime(2); say(z.fixed.type === 'p2p' ? 'Average speed camera.' : `${FX_SAY[z.fixed.type]}.`); }
-    else if (kind === 'repahead') { chime(2); say(`${KIND[z.rep.kind].name} reported ahead${z.rep.street ? ', ' + z.rep.street : ''}${inM}.`); }
-    else if (kind === 'fixahead') { chime(2); say(`${FX_SAY[z.fixed.type]} ahead${inM}.`); }
-    else if (kind === 'zone') zoneAnnounce(z, prev, st);
-    else if (kind === 'ahead') { chime(1); say(z.x.type === 'phone' ? `Phone and seatbelt camera zone ahead. ${z.x.street}${inM}.` : provOf(z) ? `Proven camera hotspot ahead. ${z.x.street}${inM}.` : `Possible camera zone ahead. ${z.x.street}${inM}.`); }
-    else if (kind === 'section' && !/^(section|fixhere)/.test(prev)) say(`Average speed section${sec.heavy ? ', heavy vehicles only' : ''}.`);
+    if (kind === 'rephere') onceSay('here|' + zid, () => { chime(2); say(`${KIND[z.rep.kind].name} reported here.`); });
+    else if (kind === 'fixhere') onceSay('here|' + zid, () => { chime(2); say(z.fixed.type === 'p2p' ? 'Average speed camera.' : `${FX_SAY[z.fixed.type]}.`); });
+    else if (kind === 'repahead') onceSay('ahead|' + zid, () => { chime(2); say(`${KIND[z.rep.kind].name} reported ahead${z.rep.street ? ', ' + z.rep.street : ''}${inM}.`); });
+    else if (kind === 'fixahead') onceSay('ahead|' + zid, () => { chime(2); say(`${FX_SAY[z.fixed.type]} ahead${inM}.`); });
+    else if (kind === 'zone') zoneAnnounce(z, prev, st, zid);
+    else if (kind === 'ahead') onceSay('ahead|' + zid, () => { chime(1); say(z.x.type === 'phone' ? `Phone and seatbelt camera zone ahead. ${z.x.street}${inM}.` : provOf(z) ? `Proven camera hotspot ahead. ${z.x.street}${inM}.` : `Possible camera zone ahead. ${z.x.street}${inM}.`); });
+    else if (kind === 'section' && !/^(section|fixhere)/.test(prev)) onceSay('here|sec:' + sec.group, () => say(`Average speed section${sec.heavy ? ', heavy vehicles only' : ''}.`));
   }
 
   // the same top banner as the simulator
@@ -3777,14 +3823,17 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   // banner second line: for a proven spot, the street and where the listed stretch is (kept short so it isn't cut off)
   const provLabel = (z, normal) => provOf(z) ? `${esc(z.x.street)}${stretchNote(z)}` : normal;
   // spoken when entering a zone (sim and live drive)
-  function zoneAnnounce(z, prev, st) {
+  function zoneAnnounce(z, prev, st, zid) {
     const P = provOf(z), base = st.replace(/:s$/, ''), strong = /^(rep|fix)/.test(prev);
     if (prev === base + ':s') return;                           // left the listed stretch but still in the zone: stay quiet
-    if (P && prev === base && st.endsWith(':s')) { chime(1); say(`Proven stretch now${P.exact ? ', between ' + P.between : ''}.`); return; }
-    if (!strong) chime(2);
+    const go = (tag, fn) => LIVE.on && zid ? onceSay(tag, fn) : fn();   // a live drive: each said once (the simulator keeps its own way)
+    if (P && prev === base && st.endsWith(':s')) { go('stretch|' + zid, () => { chime(1); say(`Proven stretch now${P.exact ? ', between ' + P.between : ''}.`); }); return; }
     if (strong && !LIVE.on) { say(`Still in camera zone, ${z.x.street}.`); return; }
-    if (z.x.type === 'phone') { say(`Phone and seatbelt camera zone. ${z.x.street}.`); return; }
-    say(`Camera zone. ${z.x.street}.` + (P ? ` Proven hotspot${st.endsWith(':s') && P.exact ? ', between ' + P.between : ''}.` : z.x.level === 'site' ? '' : ` ${LEVEL_TEXT[z.x.level]} hotspot.`));
+    go('here|' + zid, () => {
+      if (!strong) chime(2);
+      if (z.x.type === 'phone') { say(`Phone and seatbelt camera zone. ${z.x.street}.`); return; }
+      say(`Camera zone. ${z.x.street}.` + (P ? ` Proven hotspot${st.endsWith(':s') && P.exact ? ', between ' + P.between : ''}.` : z.x.level === 'site' ? '' : ` ${LEVEL_TEXT[z.x.level]} hotspot.`));
+    });
   }
   PROV_READY = true;
   // ---------- one alert per intersection ----------

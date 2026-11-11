@@ -93,8 +93,8 @@
 "size": 5048
 },
 "index.html": {
-"sha": "f5c8be5b536c0f3a14e6c88adadbbacba383a8e2f3c53d086d67037d7b255b55",
-"size": 1953658
+"sha": "2d0db9d22d529a1f43e5cc43a18ad91434ac7365087fae25cccfa6e04b816a3b",
+"size": 1957861
 },
 "manifest.webmanifest": {
 "sha": "e4fa360f27dd5f78cbfc7b667ab278eebb2bc9ee99495497f390613f040ac4ce",
@@ -105,8 +105,8 @@
 "size": 3819234
 },
 "native.js": {
-"sha": "30ab5d913e7a8922605ea4dd75fb77969a57f75cd3c70f007569a3534abae334",
-"size": 22872
+"sha": "f7d386c2b30348998f7543b84ac09bf7cf2286e10a11ea23446195ebfaa8aace",
+"size": 23234
 },
 "notices.json": {
 "sha": "1deb99001d690e5031249af6f5c3b9505716287601ecb6cf561bb496e4f97294",
@@ -117,7 +117,7 @@
 "size": 2622
 },
 "web-version.json": {
-"sha": "375e995827eb967d4cf27eda47794beb3ffc846c1e0fb2806c3f8f7233c543c2",
+"sha": "b293453bab38a1878e26a06a76c2653191658ac7361069f570a028114d9c8a3a",
 "size": 100
 }
 },
@@ -125,5 +125,5 @@
 "index.html"
 ],
 "native": 2,
-"version": 1794373944
+"version": 1794388986
 }

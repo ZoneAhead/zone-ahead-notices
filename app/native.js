@@ -344,6 +344,9 @@ window.ZA_PUSH = false;
   if (!D || !D.addListener) return;
   window.ZA_MWAY = null;
   D.addListener('road', function (r) { window.ZA_MWAY = r && r.motorway ? r.motorway : null; });
+  // each warning said once (11 Nov): the page asks the engine before saying a camera or zone warning, because the engine
+  // may have said it already in the background (ZoneCore SpeechOnce). An older app without it: always yes.
+  if (D.once) window.ZA_ONCE = function (tag) { return D.once({ tag: tag }).then(function (r) { return !r || r.ok !== false; }); };
 })();
 
 // Web code updates (WebUpdater.swift / WebUpdater.kt): tell the app this version started fine, so it keeps it (a version that never says so
