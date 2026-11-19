@@ -260,8 +260,12 @@ window.ZA_PUSH = false;
   function opts() {
     var s = document.getElementById('sndBtn'), r = 0, q = {};
     try { r = +localStorage.getItem('za-zoneR') || 0; q = JSON.parse(localStorage.getItem('za-qol') || '{}') || {}; } catch (e) { }
-    // alerts: the Settings "Alerts" choice (all / important / beeps); volume 0.5-2 and music (duck / pause): "Warning volume"
-    return { sound: (s && s.dataset.s) || 'on', zoneR: r || 700, alerts: q.alerts || 'all', volume: (+q.vol || 100) / 100, music: q.music === 'pause' ? 'pause' : 'duck' };
+    // alerts: the Settings "Alerts" choice (all / important); music (duck / pause): "Warning volume"
+    // (20 Nov 2026) voice: off (chimes only) / fixed / on; chime style; busy areas; level 0.25-1 against the music; car audio
+    var lvl = Math.max(25, Math.min(100, +q.vol || 100)) / 100;
+    return { sound: (s && s.dataset.s) || 'on', zoneR: r || 700, alerts: q.alerts === 'important' ? 'important' : (q.voice || 'off') === 'off' ? 'beeps' : 'all',   // (beeps: older app builds stay quiet too)
+             volume: lvl, level: lvl, music: q.music === 'pause' ? 'pause' : 'duck', voice: q.voice || 'off', chime: q.chime || 'radar',
+             busy: q.busy === 'voice' ? 'voice' : 'chime', carAudio: q.car === 'prompt' ? 'prompt' : 'music' };
   }
   function sync() {
     var live = document.body.classList.contains('livedrive');

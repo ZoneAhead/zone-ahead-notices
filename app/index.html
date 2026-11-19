@@ -1928,6 +1928,16 @@ body:not(.carmode) #aheadChip { display: none !important; }
 
 /* (15 Nov) the car-volume tip under the test button */
 #volGrp .voltip { margin: 10px 2px 0; font: 500 .9375rem/1.4 var(--font-body); color: var(--ink-2, #5b6472); }
+
+/* sound settings (20 Nov 2026) */
+#sndGrp .rate { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+#sndGrp .rate.rate3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#sndGrp .rate.chimes { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#sndGrp .rate button { min-height: 44px; padding: 4px 6px; line-height: 1.15; }
+#sndGrp .chimetry { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
+#sndGrp .chimetry .btn { min-height: 38px; padding: 0 10px; font-size: .85rem; }
+#volGrp .rate { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+#volGrp .rate button { min-height: 44px; padding: 4px 6px; line-height: 1.15; }
 /* ===== Directions (iPhone app only, 8 Nov 2026): search sheet, "Navigate here", the slim turn line ===== */
 #navSheet { position: fixed; inset: 0; z-index: 1320; display: flex; align-items: flex-end; justify-content: center; background: rgb(0 0 0 / .38); }
 #navSheet[hidden] { display: none; }
@@ -2649,17 +2659,17 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
       // the second camera of an average-speed section: report the average
       if (S.playing && kind === 'fixhere' && z.fixed.type === 'p2p') {
         const done = (S.sections || []).find(s => s.ends && Math.abs(s.b - z.at) < 1);
-        if (done) { const a = avgKmh(done.a, z.at); chime(2); say(`Average speed section ends.${a ? ` Your average was ${a} kilometres an hour.` : ''}`); return; }
+        if (done) { const a = avgKmh(done.a, z.at); chime('fixhere'); say(`Average speed section ends.${a ? ` Your average was ${a} kilometres an hour.` : ''}`); return; }
       }
       if (S.playing) {
         const in100 = Math.round((z ? z.start - d : 0) / 100) * 100;
         const inM = in100 >= 150 ? `, in ${in100} metres` : '';   // too close to be worth a distance: the zone alert follows straight away
-        if (kind === 'rephere') { chime(2); say(`${KIND[z.rep.kind].name} reported here.`); }
-        else if (kind === 'fixhere') { chime(2); say(z.fixed.type === 'p2p' ? `Average speed section${p2pEnd(z.fixed)}.` : `${FX_SAY[z.fixed.type]}.`); }
-        else if (kind === 'repahead') { chime(2); say(`${KIND[z.rep.kind].name} reported ahead${z.rep.street ? ', ' + z.rep.street : ''}${inM}.`); }
-        else if (kind === 'fixahead') { chime(2); say(`${FX_SAY[z.fixed.type]} ahead${inM}.`); }
+        if (kind === 'rephere') { chime('report'); say(`${KIND[z.rep.kind].name} reported here.`); }
+        else if (kind === 'fixhere') { chime('fixhere'); say(z.fixed.type === 'p2p' ? `Average speed section${p2pEnd(z.fixed)}.` : `${FX_SAY[z.fixed.type]}.`); }
+        else if (kind === 'repahead') { chime('report'); say(`${KIND[z.rep.kind].name} reported ahead${z.rep.street ? ', ' + z.rep.street : ''}${inM}.`); }
+        else if (kind === 'fixahead') { chime('fixed'); say(`${FX_SAY[z.fixed.type]} ahead${inM}.`); }
         else if (kind === 'zone') zoneAnnounce(z, prev, st);
-        else if (kind === 'ahead') { chime(1); say(z.x.type === 'phone' ? `Phone and seatbelt camera zone ahead. ${z.x.street}${inM}.` : provOf(z) ? `Proven camera hotspot ahead. ${z.x.street}${inM}.` : `Possible camera zone ahead. ${z.x.street}${inM}.`); }
+        else if (kind === 'ahead') { chime('ahead'); say(z.x.type === 'phone' ? `Phone and seatbelt camera zone ahead. ${z.x.street}${inM}.` : provOf(z) ? `Proven camera hotspot ahead. ${z.x.street}${inM}.` : `Possible camera zone ahead. ${z.x.street}${inM}.`); }
         else if (kind === 'done') say('You have arrived.');
         else if (kind === 'section' && !prev.startsWith('section') && !prev.startsWith('fixhere')) say(`Average speed section${sec.heavy ? ', heavy vehicles only' : ''}.`);
       }
@@ -2668,20 +2678,49 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   // muted for a while (Mute 10 min), or the zone we're alerting about is muted (Mute this zone)
   const quiet = () => Date.now() < S.muteUntil || !!(S.cur && S.mutedZones.has(S.cur.rep ? 'r' + S.cur.rep.id : 'x' + S.cur.x.i));
   let actx;
+  // (20 Nov 2026) chimes: each kind of alert its own sound, in the chosen style (Settings), from chimes/<style>-<name>.mp3
+  // (map/make_chimes.py), matched to a music track's loudness. In the phone app they play through the app (so they reach
+  // the car's speakers and follow the music's volume); on the web from the file; the old beeps if neither works.
+  const CHIMES = { buf: {}, native: null };
   function chime(n) {
     if (!S.voice || quiet()) return;
+    playChime(typeof n === 'string' ? n : n > 1 ? 'fixed' : 'ahead');
+  }
+  function playChime(name, style) {
+    const st = style || window.ZA_CHIME || 'radar';
+    const D = window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins ? Capacitor.Plugins.ZoneAheadDrive : null;
+    if (D && D.chime && CHIMES.native !== false) {
+      try { D.chime({ name, style: st }).then(() => { CHIMES.native = true; }, () => { CHIMES.native = false; webChime(name, st); }); return; } catch { CHIMES.native = false; }
+    }
+    webChime(name, st);
+  }
+  window.ZA_playChime = playChime;
+  async function webChime(name, st) {
     try {
       actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-      for (let i = 0; i < n; i++) { const o = actx.createOscillator(), g = actx.createGain(), t0 = actx.currentTime + i * .22; o.frequency.value = n > 1 ? 988 : 784; o.connect(g); g.connect(actx.destination); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(.25 * Math.min(2, window.ZA_VOL || 1), t0 + .02); g.gain.exponentialRampToValueAtTime(.0001, t0 + .18); o.start(t0); o.stop(t0 + .2); }
+      if (actx.state === 'suspended' && actx.resume) actx.resume();
+      const key = st + '-' + name;
+      let b = CHIMES.buf[key];
+      if (!b) { const r = await fetch('chimes/' + key + '.mp3'); if (!r.ok) throw 0; const ab = await r.arrayBuffer(); b = CHIMES.buf[key] = await new Promise((ok, no) => actx.decodeAudioData(ab, ok, no)); }
+      const src = actx.createBufferSource(), g = actx.createGain();
+      g.gain.value = Math.min(1, window.ZA_VOL || 1); src.buffer = b; src.connect(g); g.connect(actx.destination); src.start();
+    } catch { oscChime(name); }
+  }
+  function oscChime(name) {
+    try {
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+      if (name === 'ended') return oscEnd();
+      const n = name === 'ahead' ? 1 : 2;
+      for (let i = 0; i < n; i++) { const o = actx.createOscillator(), g = actx.createGain(), t0 = actx.currentTime + i * .22; o.frequency.value = n > 1 ? 988 : 784; o.connect(g); g.connect(actx.destination); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(.25 * Math.min(1, window.ZA_VOL || 1), t0 + .02); g.gain.exponentialRampToValueAtTime(.0001, t0 + .18); o.start(t0); o.stop(t0 + .2); }
     } catch { }
   }
-  // zone ended: two rising notes, softer than the warning beeps so it's easy to tell apart
+  function oscEnd() {
+    [523, 784].forEach((f, i) => { const o = actx.createOscillator(), g = actx.createGain(), t0 = actx.currentTime + i * .16; o.type = 'sine'; o.frequency.value = f; o.connect(g); g.connect(actx.destination); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(.16 * Math.min(1, window.ZA_VOL || 1), t0 + .03); g.gain.exponentialRampToValueAtTime(.0001, t0 + .3); o.start(t0); o.stop(t0 + .32); });
+  }
+  // zone ended: its own soft falling sound, easy to tell from the warnings
   function endTone() {
     if (!S.voice || Date.now() < S.muteUntil) return;
-    try {
-      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-      [523, 784].forEach((f, i) => { const o = actx.createOscillator(), g = actx.createGain(), t0 = actx.currentTime + i * .16; o.type = 'sine'; o.frequency.value = f; o.connect(g); g.connect(actx.destination); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(.16 * Math.min(2, window.ZA_VOL || 1), t0 + .03); g.gain.exponentialRampToValueAtTime(.0001, t0 + .3); o.start(t0); o.stop(t0 + .32); });
-    } catch { }
+    playChime('ended');
   }
   // ---- voice: the person's chosen voice, else the most natural-sounding English one on the device ----
   const VOICE = { name: '', rate: 1, pitch: 1 };
@@ -3568,7 +3607,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     if (kind === 'fixhere' && z.fixed.type === 'p2p' && z.fixed.group) {
       if (sec && sec.group === z.fixed.group && sec.key !== lKey(z)) {
         const a = Math.round(sec.dist / Math.max(1, (LIVE.t - sec.t0) / 1000) * 3.6); LIVE.sec = null;
-        onceSay('end|sec:' + sec.group, () => { chime(2); say(`Average speed section ends. Your average was ${a} kilometres an hour.`); }); return;
+        onceSay('end|sec:' + sec.group, () => { chime('fixhere'); say(`Average speed section ends. Your average was ${a} kilometres an hour.`); }); return;
       }
       if (!sec) LIVE.sec = { group: z.fixed.group, key: lKey(z), name: z.fixed.street.split(':')[0], t0: LIVE.t, dist: 0, heavy: /heavy vehicles only/i.test(z.fixed.note) };
     }
@@ -3576,12 +3615,12 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     // (14 Nov) its "ahead" was said moments ago: coming into it is the tone only (two sentences back to back sounded like a repeat)
     const justAhead = () => !!(LIVE.aheadSaid && LIVE.aheadSaid.id === zid && Date.now() - LIVE.aheadSaid.t < 8000);
     const saidAhead = () => { LIVE.aheadSaid = { id: zid, t: Date.now() }; };
-    if (kind === 'rephere') onceSay('here|' + zid, () => { chime(2); if (!justAhead()) say(`${KIND[z.rep.kind].name} reported here.`); });
-    else if (kind === 'fixhere') onceSay('here|' + zid, () => { chime(2); if (!justAhead()) say(z.fixed.type === 'p2p' ? 'Average speed camera.' : `${FX_SAY[z.fixed.type]}.`); });
-    else if (kind === 'repahead') onceSay('ahead|' + zid, () => { saidAhead(); chime(2); say(`${KIND[z.rep.kind].name} reported ahead${z.rep.street ? ', ' + z.rep.street : ''}${inM}.`); });
-    else if (kind === 'fixahead') onceSay('ahead|' + zid, () => { saidAhead(); chime(2); say(`${FX_SAY[z.fixed.type]} ahead${inM}.`); });
+    if (kind === 'rephere') onceSay('here|' + zid, () => { chime('report'); if (!justAhead()) say(`${KIND[z.rep.kind].name} reported here.`); });
+    else if (kind === 'fixhere') onceSay('here|' + zid, () => { chime('fixhere'); if (!justAhead()) say(z.fixed.type === 'p2p' ? 'Average speed camera.' : `${FX_SAY[z.fixed.type]}.`); });
+    else if (kind === 'repahead') onceSay('ahead|' + zid, () => { saidAhead(); chime('report'); say(`${KIND[z.rep.kind].name} reported ahead${z.rep.street ? ', ' + z.rep.street : ''}${inM}.`); });
+    else if (kind === 'fixahead') onceSay('ahead|' + zid, () => { saidAhead(); chime('fixed'); say(`${FX_SAY[z.fixed.type]} ahead${inM}.`); });
     else if (kind === 'zone') zoneAnnounce(z, prev, st, zid, justAhead());
-    else if (kind === 'ahead') onceSay('ahead|' + zid, () => { saidAhead(); chime(1); say(z.x.type === 'phone' ? `Phone and seatbelt camera zone ahead. ${z.x.street}${inM}.` : provOf(z) ? `Proven camera hotspot ahead. ${z.x.street}${inM}.` : `Possible camera zone ahead. ${z.x.street}${inM}.`); });
+    else if (kind === 'ahead') onceSay('ahead|' + zid, () => { saidAhead(); chime('ahead'); say(z.x.type === 'phone' ? `Phone and seatbelt camera zone ahead. ${z.x.street}${inM}.` : provOf(z) ? `Proven camera hotspot ahead. ${z.x.street}${inM}.` : `Possible camera zone ahead. ${z.x.street}${inM}.`); });
     else if (kind === 'section' && !/^(section|fixhere)/.test(prev)) onceSay('here|sec:' + sec.group, () => say(`Average speed section${sec.heavy ? ', heavy vehicles only' : ''}.`));
   }
 
@@ -3696,10 +3735,10 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     const left = PARK.timerEnd - Date.now(), el = $('timerLeft');
     if (!PARK.timerEnd) { el.textContent = 'Pick the time limit on the sign. You get a reminder 5 minutes before it runs out.'; $('timerStop').hidden = true; return; }
     $('timerStop').hidden = false;
-    if (left <= 0) { el.textContent = 'Time is up. Move the car or check the sign.'; if (PARK.warned !== 'end') { PARK.warned = 'end'; chime(2); say('Your parking time is up.'); toast('Parking time is up.'); } return; }
+    if (left <= 0) { el.textContent = 'Time is up. Move the car or check the sign.'; if (PARK.warned !== 'end') { PARK.warned = 'end'; chime('report'); say('Your parking time is up.'); toast('Parking time is up.'); } return; }
     const h = Math.floor(left / 3600e3), m = Math.floor(left % 3600e3 / 60e3), s = Math.floor(left % 60e3 / 1000);
     el.textContent = `${h ? h + ' h ' : ''}${m} min ${String(s).padStart(2, '0')} s left`;
-    if (left <= 5 * 60e3 && !PARK.warned) { PARK.warned = 'soon'; chime(1); say('Five minutes left on your parking.'); toast('5 minutes left on your parking.'); }
+    if (left <= 5 * 60e3 && !PARK.warned) { PARK.warned = 'soon'; chime('report'); say('Five minutes left on your parking.'); toast('5 minutes left on your parking.'); }
   }
   setInterval(timerTick, 1000);
 
@@ -3915,10 +3954,10 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     const P = provOf(z), base = st.replace(/:s$/, ''), strong = /^(rep|fix)/.test(prev);
     if (prev === base + ':s') return;                           // left the listed stretch but still in the zone: stay quiet
     const go = (tag, fn) => LIVE.on && zid ? onceSay(tag, fn) : fn();   // a live drive: each said once (the simulator keeps its own way)
-    if (P && prev === base && st.endsWith(':s')) { go('stretch|' + zid, () => { chime(1); say(`Proven stretch now${P.exact ? ', between ' + P.between : ''}.`); }); return; }
+    if (P && prev === base && st.endsWith(':s')) { go('stretch|' + zid, () => { chime('zone'); say(`Proven stretch now${P.exact ? ', between ' + P.between : ''}.`); }); return; }
     if (strong && !LIVE.on) { say(`Still in camera zone, ${z.x.street}.`); return; }
     go('here|' + zid, () => {
-      if (!strong) chime(2);
+      if (!strong) chime('zone');
       if (toneOnly) return;                                      // its "ahead" was said moments ago
       if (z.x.type === 'phone') { say(`Phone and seatbelt camera zone. ${z.x.street}.`); return; }
       say(`Camera zone. ${z.x.street}.` + (P ? ` Proven hotspot${st.endsWith(':s') && P.exact ? ', between ' + P.between : ''}.` : z.x.level === 'site' ? '' : ` ${LEVEL_TEXT[z.x.level]} hotspot.`));
@@ -4691,11 +4730,20 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   // ---------- v18: quality of life ----------
   // Settings, alert levels, speed limits in camera zones, "Still there?" on reports, trip check with Home / Work,
   // auto-start from a link (iPhone Shortcuts), parking timer when a drive ends in a sensor bay, offline, first-launch intro.
-  const QOL = { alerts: 'all', limit: 'zones', places: {}, intro: false, vol: 100, music: 'duck' };
+  const QOL = { alerts: 'all', limit: 'zones', places: {}, intro: false, vol: 100, music: 'duck', chime: 'radar', busy: 'chime', car: 'music' };
   try { Object.assign(QOL, JSON.parse(localStorage.getItem('za-qol') || '{}')); } catch { }
+  // (20 Nov 2026) the voice is now a choice of its own (chimes only / voice for fixed cameras / voice for everything),
+  // chimes for everyone by default (most people preferred them to the voice); "Beeps only" became chimes only. The warning
+  // volume is now against the music (25-100%: 100% is a music track's loudness), not boosted past the phone's voice.
+  if (!QOL.voice) { QOL.voice = 'off'; QOL.voiceNews = 1; }
+  if (QOL.alerts === 'beeps') { QOL.alerts = 'all'; QOL.voice = 'off'; }
+  QOL.vol = Math.max(25, Math.min(100, +QOL.vol || 100));
+  window.ZA_CHIME = QOL.chime;
   // (the phone app's drive engine reads the same settings: native.js listens for za-settings)
-  const qolSave = () => { try { localStorage.setItem('za-qol', JSON.stringify(QOL)); } catch { } window.ZA_VOL = (QOL.vol || 100) / 100; try { window.dispatchEvent(new Event('za-settings')); } catch { } };
+  const qolSave = () => { try { localStorage.setItem('za-qol', JSON.stringify(QOL)); } catch { } window.ZA_VOL = (QOL.vol || 100) / 100; window.ZA_CHIME = QOL.chime; try { window.dispatchEvent(new Event('za-settings')); } catch { } };
   window.ZA_VOL = (QOL.vol || 100) / 100;
+  qolSave();   // the settings as now (the voice choice, the volume range) for the phone app too
+  if (QOL.voiceNews === 1) setTimeout(() => { try { toast('Alerts now chime instead of speaking. Turn the voice back on in Settings › Sound.'); } catch { } QOL.voiceNews = 2; qolSave(); }, 4000);
   const QS = new URLSearchParams(location.search), HASH = location.hash.replace(/^#/, '');
   const AUTO = QS.has('drive') || HASH === 'drive' ? 'drive' : QS.get('mode') === 'park' || HASH === 'park' ? 'park' : QS.get('trip') || (/^trip-(home|work)$/.test(HASH) ? HASH.slice(5) : '');
   const mk = (tag, attrs, html) => { const e = document.createElement(tag); Object.assign(e, attrs || {}); if (html != null) e.innerHTML = html; return e; };
@@ -4708,23 +4756,31 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   const important = z => !z || !!(z.rep || z.fixed || z.proven || provOf(z) || (z.x && (z.x.level === 'high' || z.x.type === 'phone')));
   let lastZ = null;   // the alert the engine is on (or just left), for "Camera zone ended"
   const say0 = say, chime0 = chime, endTone0 = endTone;
+  // the voice for camera warnings (turn prompts are said with force: always). "fixed": fixed cameras and driver reports
+  // only, zones chime. In a busy stretch (3 zone warnings said inside 90 s) zones chime without the voice for 3 minutes.
+  const BUSY = { at: [], until: 0 };
+  const fixedish = text => !!(S.cur && (S.cur.fixed || S.cur.rep)) && !/zone/i.test(text);
   say = function (text, force) {
     if (!force) {
-      if (QOL.alerts === 'beeps') return;
       if (QOL.alerts === 'important' && !important(S.cur || (/zone ended/i.test(text) ? lastZ : null))) return;
+      const fx = fixedish(text), ended = /zone ended/i.test(text);
+      if (QOL.voice === 'off') return;
+      if (QOL.voice === 'fixed' && !fx) return;
+      if (!fx && QOL.busy !== 'voice') {
+        const now = Date.now();
+        if (now < BUSY.until) return;
+        if (!ended) { BUSY.at = BUSY.at.filter(t => now - t < 90e3).concat(now); if (BUSY.at.length >= 3) BUSY.until = now + 180e3; }
+      }
     }
     return say0(text);
   };
   chime = function (n, force) { if (!force && QOL.alerts === 'important' && !important(S.cur)) return; return chime0(n); };
   endTone = function () { if (QOL.alerts === 'important' && !important(lastZ)) return; return endTone0(); };
   $('voiceTest').onclick = () => { const was = S.voice; S.voice = true; say0('Possible camera zone ahead. Kilby Road, in 300 metres.'); S.voice = was; };
-  // over the limit: three short low notes, unlike the camera beeps
+  // over the limit: its own low notes, unlike the camera chimes
   function overTone() {
     if (!S.voice || Date.now() < S.muteUntil) return;
-    try {
-      actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-      for (let i = 0; i < 3; i++) { const o = actx.createOscillator(), g = actx.createGain(), t0 = actx.currentTime + i * .14; o.type = 'triangle'; o.frequency.value = 587; o.connect(g); g.connect(actx.destination); g.gain.setValueAtTime(.0001, t0); g.gain.exponentialRampToValueAtTime(.22, t0 + .015); g.gain.exponentialRampToValueAtTime(.0001, t0 + .1); o.start(t0); o.stop(t0 + .12); }
-    } catch { }
+    playChime('over');
   }
 
   // ===== Speed limits in camera zones (OpenStreetMap maxspeed, built into geo/lim-<STATE>.json) =====
@@ -5033,11 +5089,19 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   const setBox = mk('details', { className: 'about', id: 'setBox' });
   setBox.innerHTML = '<summary>Settings</summary><div class="setcfg" id="setCfg"></div>';
   $('voiceBox').before(setBox);
-  const LEVELS = { all: ['Everything', 'Voice and beeps for every camera zone, fixed camera and report.'], important: ['Important only', 'Speaks only for fixed cameras, live reports, proven and high-risk hotspots and phone zones. Other zones show on screen quietly.'], beeps: ['Beeps only', 'No voice: a beep for each alert. Good with music or a navigation app talking.'] };
+  const LEVELS = { all: ['Everything', 'An alert for every camera zone, fixed camera and report.'], important: ['Important only', 'Alerts only for fixed cameras, live reports, proven and high-risk hotspots and phone zones. Other zones show on screen quietly.'] };
+  const VOICES = { off: ['Chimes only', 'A chime for each alert, a different one for each kind. No voice (directions still speak).'], fixed: ['Voice for fixed cameras', 'Chimes for camera zones; the voice for fixed cameras and driver reports.'], on: ['Voice for everything', 'A chime, then the voice, for each alert.'] };
+  const CHIME_STYLES = { radar: ['Radar', 'Short bright beeps in quick bursts, like a radar detector'], classic: ['Classic', 'Clean two-note chimes'], soft: ['Soft', 'Low, rounded notes'], bell: ['Bell', 'A two-note bell'] };
   function setDraw() {
     const c = $('setCfg'), P = QOL.places;
     const pl = k => P[k] ? `<span>${esc(P[k].label)}</span><button class="btn" type="button" data-clear="${k}">Forget</button>` : '<span class="sub">Not set. Use Plan a trip, then Save.</span><span></span>';
-    c.innerHTML = `<div class="setgrp"><b>Alerts</b><div class="rate" role="group" aria-label="Alert level">${Object.entries(LEVELS).map(([k, v]) => `<button type="button" data-lvl="${k}" aria-pressed="${QOL.alerts === k}">${v[0]}</button>`).join('')}</div><p class="sub">${LEVELS[QOL.alerts][1]}</p></div>
+    c.innerHTML = `<div class="setgrp"><b>Alerts</b><div class="rate" role="group" aria-label="Alert level">${Object.entries(LEVELS).map(([k, v]) => `<button type="button" data-lvl="${k}" aria-pressed="${QOL.alerts === k}">${v[0]}</button>`).join('')}</div><p class="sub">${(LEVELS[QOL.alerts] || LEVELS.all)[1]}</p></div>
+      <div class="setgrp" id="sndGrp"><b>Sound</b><div class="rate rate3" role="group" aria-label="Voice">${Object.entries(VOICES).map(([k, v]) => `<button type="button" data-voice="${k}" aria-pressed="${QOL.voice === k}">${v[0]}</button>`).join('')}</div><p class="sub">${VOICES[QOL.voice][1]}</p>
+        <b class="volsub">Chime</b><div class="rate chimes" role="group" aria-label="Chime sound">${Object.entries(CHIME_STYLES).map(([k, v]) => `<button type="button" data-chime="${k}" aria-pressed="${QOL.chime === k}" title="${v[1]}">${v[0]}</button>`).join('')}</div>
+        <p class="sub">${CHIME_STYLES[QOL.chime][1]}. Tap one to hear it; each kind of alert has its own sound.</p>
+        <div class="chimetry">${[['ahead', 'Zone ahead'], ['zone', 'In a zone'], ['fixed', 'Fixed camera'], ['report', 'Report'], ['ended', 'Zone ended']].map(([k, t]) => `<button class="btn" type="button" data-try="${k}">${t}</button>`).join('')}</div>
+        ${QOL.voice === 'off' ? '' : `<b class="volsub">Busy areas</b><div class="rate" role="group" aria-label="Busy areas"><button type="button" data-busy="chime" aria-pressed="${QOL.busy !== 'voice'}">Chime instead</button><button type="button" data-busy="voice" aria-pressed="${QOL.busy === 'voice'}">Keep the voice</button></div>
+        <p class="sub">${QOL.busy === 'voice' ? 'Every zone is said, however many come close together.' : 'After three zones in a minute and a half, zones chime without the voice for 3 minutes, so it doesn\'t keep talking where cameras are close together. Fixed cameras are still said.'}</p>`}</div>
       ${volHtml()}
       <div class="setgrp"><b>Speed limit in camera zones</b><div class="rate" role="group" aria-label="Speed limit warning"><button type="button" data-limit="zones" aria-pressed="${QOL.limit !== 'off'}">Show + chime</button><button type="button" data-limit="off" aria-pressed="${QOL.limit === 'off'}">Off</button></div>
         <p class="sub">Shows the limit inside camera zones and gives three soft notes if you're over it. Limits come from OpenStreetMap and can be out of date: the signs always win. School-zone times are included where mapped.</p></div>
@@ -5053,6 +5117,10 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
         <p class="sub">Keeps the app, every camera list, whole-street shapes and speed limits on this phone, so alerts keep working with no signal (regional drives). Map tiles you've already looked at are kept too. Road names, live reports and the 3D view need a connection.</p></div>
       <div class="setgrp"><button class="btn" type="button" id="introAgain">Show the intro again</button></div>`;
     c.querySelectorAll('[data-lvl]').forEach(b => b.onclick = () => { QOL.alerts = b.dataset.lvl; qolSave(); setDraw(); toast(`Alerts: ${LEVELS[QOL.alerts][0]}.`); });
+    c.querySelectorAll('[data-voice]').forEach(b => b.onclick = () => { QOL.voice = b.dataset.voice; qolSave(); setDraw(); toast(`Sound: ${VOICES[QOL.voice][0]}.`); });
+    c.querySelectorAll('[data-chime]').forEach(b => b.onclick = () => { QOL.chime = b.dataset.chime; qolSave(); setDraw(); playChime('ahead', QOL.chime); });
+    c.querySelectorAll('[data-try]').forEach(b => b.onclick = () => playChime(b.dataset.try, QOL.chime));
+    c.querySelectorAll('[data-busy]').forEach(b => b.onclick = () => { QOL.busy = b.dataset.busy; qolSave(); setDraw(); });
     volWire(c);
     carPickWire(c);
     d3DetailWire(c);
@@ -5063,27 +5131,32 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     offStatus();
   }
 
-  // ===== Warning volume (11 Nov: warnings were hard to hear over Spotify) =====
-  // In the phone app: the voice up to 200% (boosted past the phone's own maximum, with a limiter so it doesn't crackle), and
-  // the music lowered or paused while a warning plays. On the website: the beeps only (a web page can't boost its voice).
+  // ===== Warning volume (20 Nov 2026: against the music) =====
+  // Chimes and the voice play at a music track's loudness at 100%, so the phone's (or car's) volume sets them as it sets
+  // the music, and the slider can make them quieter than the music. In the phone app: in the car, with the music's volume
+  // (the default) or the car's navigation-prompt volume; the music lowered or paused while a warning plays.
   const IN_APP = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
   function volHtml() {
     const v = QOL.vol || 100;
     return `<div class="setgrp" id="volGrp"><b>Warning volume</b>
-      <div class="volrow"><span aria-hidden="true">🔈</span><input type="range" id="volR" min="50" max="200" step="10" value="${v}" aria-label="Warning volume" aria-valuetext="${v}%"><span aria-hidden="true">🔊</span><output id="volOut" for="volR">${v}%</output></div>
-      <p class="sub">${IN_APP ? 'Above 100% the voice is made louder and clearer than your phone\'s normal voice. <b>In the car:</b> most cars keep a separate volume for spoken warnings. Play a test warning (here or on the car screen) and turn the car\'s volume up while it speaks. Pausing the music makes warnings easiest to hear.' : 'Sets the beeps. The voice follows your phone\'s volume (the phone app can boost it further).'}</p>
+      <div class="volrow"><span aria-hidden="true">🔈</span><input type="range" id="volR" min="25" max="100" step="5" value="${v}" aria-label="Warning volume" aria-valuetext="${v}%"><span aria-hidden="true">🔊</span><output id="volOut" for="volR">${v}%</output></div>
+      <p class="sub">At 100% alerts are as loud as a music track, so your phone's volume (or the car's) turns them up and down with the music. Lower this if they stand out more than you like.</p>
+      ${IN_APP ? `<b class="volsub">In the car, alerts play</b><div class="rate" role="group" aria-label="Car audio"><button type="button" data-car="music" aria-pressed="${QOL.car !== 'prompt'}">With the music volume</button><button type="button" data-car="prompt" aria-pressed="${QOL.car === 'prompt'}">As navigation prompts</button></div>
+      <p class="sub">${QOL.car === 'prompt' ? 'Your car\'s spoken-prompt volume, played over the radio as a navigation app\'s directions are. Set it by turning the car\'s volume while a test plays.' : 'The volume knob sets them as it does the music. If you listen to the car\'s own radio, the car may switch to the phone for each alert; choose navigation prompts to play over the radio.'}</p>` : ''}
       ${IN_APP ? `<b class="volsub">While a warning plays</b><div class="rate" role="group" aria-label="Music while a warning plays"><button type="button" data-music="duck" aria-pressed="${QOL.music !== 'pause'}">Lower the music</button><button type="button" data-music="pause" aria-pressed="${QOL.music === 'pause'}">Pause the music</button></div>
       <p class="sub">${QOL.music === 'pause' ? 'Spotify and other music pause for each warning, then carry on.' : 'Music gets quieter for each warning. Choose Pause if warnings are still hard to hear.'} During a phone call your phone keeps the call's sound first, so warnings show on screen and in CarPlay or Android Auto.</p>` : ''}
-      <button class="btn voltest" type="button" id="volTest">Play a test warning</button>${IN_APP ? `<p class="voltip">In the car, turn the car's volume up while the test plays: most cars keep spoken warnings at their own volume.</p>` : ''}</div>`;
+      <button class="btn voltest" type="button" id="volTest">Play a test warning</button></div>`;
   }
   function volWire(c) {
     const r = c.querySelector('#volR'); if (!r) return;
     r.oninput = () => { c.querySelector('#volOut').textContent = r.value + '%'; r.setAttribute('aria-valuetext', r.value + '%'); };
     r.onchange = () => { QOL.vol = +r.value; qolSave(); };
     c.querySelectorAll('[data-music]').forEach(b => b.onclick = () => { QOL.music = b.dataset.music; qolSave(); setDraw(); });
+    c.querySelectorAll('[data-car]').forEach(b => b.onclick = () => { QOL.car = b.dataset.car; qolSave(); setDraw(); });
     c.querySelector('#volTest').onclick = () => {
       QOL.vol = +r.value; qolSave();
-      const was = S.voice; S.voice = true; chime0(1); setTimeout(() => { say0('Possible camera zone ahead. Kilby Road, in 300 metres.'); S.voice = was; }, 350);
+      playChime('ahead', QOL.chime);
+      if (QOL.voice !== 'off') { const was = S.voice; S.voice = true; setTimeout(() => { say0('Possible camera zone ahead. Kilby Road, in 300 metres.'); S.voice = was; }, 600); }
     };
   }
 
@@ -5125,7 +5198,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
       <button class="btn primary ibig" type="button" id="introLoc">Allow location</button><p class="sub" id="introLocR" aria-live="polite"></p>`,
     () => `<div class="istep">3 of 3</div><h2 id="introH">How alerts work</h2>
       <div class="idemo"><span class="d1">Camera zone ahead · 300 m</span><span class="d2">In camera zone</span><span class="d3">Zone ended</span></div>
-      <p>A beep and a voice warning about 25 seconds before each zone, then a soft two-note tone when it ends.</p>
+      <p>A chime about 25 seconds before each zone (a different one for fixed cameras, and the voice too if you like: Settings › Sound), then a soft falling tone when it ends.</p>
       <div class="setgrp"><b>How much should it talk?</b><div class="rate" role="group" aria-label="Alert level">${Object.entries(LEVELS).map(([k, v]) => `<button type="button" data-ilvl="${k}" aria-pressed="${QOL.alerts === k}">${v[0]}</button>`).join('')}</div></div>`];
   function introOpen(n) {
     intro.dataset.n = n; intro.hidden = false;

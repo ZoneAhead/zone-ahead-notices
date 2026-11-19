@@ -8,6 +8,122 @@
 "sha": "a652975fb6373c90c4cfccd22fe0da39453ad518d1783190464898134bbfd30a",
 "size": 1775
 },
+"chimes/bell-ahead.mp3": {
+"sha": "3f078034c951cec57edc34b1ccc1a6174b51764ce3bb2fc4c944283385544261",
+"size": 18434
+},
+"chimes/bell-ended.mp3": {
+"sha": "fcfff342a149b2cc164b46223135bcf6c869b576d9b724bc9fd815355db60a72",
+"size": 22195
+},
+"chimes/bell-fixed.mp3": {
+"sha": "1a2f9c7160e24d637efb1d05e51213a92264ade7f26a33002708fa742202bcfe",
+"size": 26375
+},
+"chimes/bell-fixhere.mp3": {
+"sha": "3d2c9af9869f675d51db61970f916649ad04884914dbc86fa610b7fd06f007d7",
+"size": 26375
+},
+"chimes/bell-over.mp3": {
+"sha": "854fd597fc51dd91fac1ad82a7c04c5097c14f6e6ec86767e05b3aaef9d6cbdc",
+"size": 21359
+},
+"chimes/bell-report.mp3": {
+"sha": "e05b417242cf5e44be5ea571c96de351e2bc645c36309451097dc051024cd4ff",
+"size": 23031
+},
+"chimes/bell-zone.mp3": {
+"sha": "caab63cff842a99ee877eb8807282c28157ea8fde5463306166c624258d670e3",
+"size": 23867
+},
+"chimes/chimes.json": {
+"sha": "faca5582bc47c34f23ec1a732d7e0928f7787135ac3b1c734d084589695e5b69",
+"size": 139
+},
+"chimes/classic-ahead.mp3": {
+"sha": "7588b4eee3ed35caabc1f2945829ac0543111664fe5743b2838b6665455815b7",
+"size": 5895
+},
+"chimes/classic-ended.mp3": {
+"sha": "cb50df8dd5679fe06a3d75ed2436e09bf7666b3d681982fd927dd24b0ad2a9f0",
+"size": 10493
+},
+"chimes/classic-fixed.mp3": {
+"sha": "a91ba6c642a00c73cae37ad6f7ffd36e7d2e6a94a4b004348d0933b5a61b602a",
+"size": 10075
+},
+"chimes/classic-fixhere.mp3": {
+"sha": "165cf024b823adb5f565c0e354d51a19476e4d6983825c3c83f96f56afa594d8",
+"size": 11746
+},
+"chimes/classic-over.mp3": {
+"sha": "4eee1f038dec3d4f66dbef0b2542f4b88ae89e65344a9830ce4c2aad1b63658f",
+"size": 9239
+},
+"chimes/classic-report.mp3": {
+"sha": "0c82137df93beac93c26b6590191724392c54f9c76f2bc3578c82dfe571e549b",
+"size": 9239
+},
+"chimes/classic-zone.mp3": {
+"sha": "a06c69bfc75d255f03a6ea31d488618857a1c8de0727a895f4b7af0553401d6d",
+"size": 9239
+},
+"chimes/radar-ahead.mp3": {
+"sha": "752286095b1cbd68b39ae3130f7fa8d591d25296d8468de1a17c1b2c180cbb2d",
+"size": 6313
+},
+"chimes/radar-ended.mp3": {
+"sha": "7d668c6800a3748fff64392d265ede4a1c7e965e98bcca343d8c832175389280",
+"size": 5477
+},
+"chimes/radar-fixed.mp3": {
+"sha": "c2eae83d0028e245d012e17cc0d2ea4aee090857356a1b3c4b9801b0c9c07900",
+"size": 11328
+},
+"chimes/radar-fixhere.mp3": {
+"sha": "c2119a3d51ec5329a39e6e3b2c67df46b5b6c737c78d757111c8f6732fba7047",
+"size": 7985
+},
+"chimes/radar-over.mp3": {
+"sha": "0bee64329c7ae89a31d33847e4a3d15fed7f1b010e5fb1fe6ba892de9228d9b0",
+"size": 8403
+},
+"chimes/radar-report.mp3": {
+"sha": "c39abb874663dccd55ebc522ec6db1d864efc6627429bb4d8bdf14264a7a2cb1",
+"size": 5895
+},
+"chimes/radar-zone.mp3": {
+"sha": "d38978ee24c6fdbbcb8aae3093adfceea8a56cca83e1d54968573bfa68ca9d33",
+"size": 13000
+},
+"chimes/soft-ahead.mp3": {
+"sha": "6c66e37d4456ae63a76404c0b330f5e635e0d75aee45e4386d747105fb1a1eba",
+"size": 13418
+},
+"chimes/soft-ended.mp3": {
+"sha": "ffa30f054ddf65a395fe06217ab2b9b625145d2dc48ed99f8bab3776a2cf769b",
+"size": 16762
+},
+"chimes/soft-fixed.mp3": {
+"sha": "360b885ce01b96517e5639919e97969716892819f0d6fe626072a394f4c9b8cf",
+"size": 16762
+},
+"chimes/soft-fixhere.mp3": {
+"sha": "e80b1e245d3dc15e4578ce94853acaa9c109fc3710a0aa4641023b45c23d60f4",
+"size": 17598
+},
+"chimes/soft-over.mp3": {
+"sha": "b263f87adcdfbaab217a49f74906390265e5c837b8b6f2aafab687f8de3c54e6",
+"size": 15508
+},
+"chimes/soft-report.mp3": {
+"sha": "202b99871252b90d4e8ce53fe590fb400fa78a02304d805f42b5fba538ef4920",
+"size": 15090
+},
+"chimes/soft-zone.mp3": {
+"sha": "141e122a72e3a7e6e0be9e46306e7b16d3b373af96a308d57475d28aa5936a0b",
+"size": 17598
+},
 "favicon-32.png": {
 "sha": "af988086597f2289976e58f2000ffa64d886c5b31a2ad18f753fbf5afbda4968",
 "size": 1031
@@ -93,8 +209,8 @@
 "size": 5048
 },
 "index.html": {
-"sha": "93a840637ba53f73f12a8f2e81eebf6a0711c9c2d8f80838a14944bce88b5997",
-"size": 1965154
+"sha": "5f51bc07c1633f34a910ee622048cd28bbb7737b91462a144b8cce4d9662b913",
+"size": 1972207
 },
 "manifest.webmanifest": {
 "sha": "e4fa360f27dd5f78cbfc7b667ab278eebb2bc9ee99495497f390613f040ac4ce",
@@ -105,19 +221,19 @@
 "size": 3819463
 },
 "native.js": {
-"sha": "f7d386c2b30348998f7543b84ac09bf7cf2286e10a11ea23446195ebfaa8aace",
-"size": 23234
+"sha": "337eda94596d160a7dfa430d81cd2e1b9030ac3054c25c5053cd22565fb9d4f4",
+"size": 23685
 },
 "notices.json": {
 "sha": "1deb99001d690e5031249af6f5c3b9505716287601ecb6cf561bb496e4f97294",
 "size": 426
 },
 "sw.js": {
-"sha": "a95244b98d33c26fbc684b6b5b2504aada4e5533cec43d5d7fb0fc415692551c",
-"size": 2622
+"sha": "b5e9ca902fafd6292dc166e5841c7c071cc8e441d741a331a7f71e4d08cde3a9",
+"size": 2717
 },
 "web-version.json": {
-"sha": "47ee64ffef4fc321400e172e1c8c0c6a706d05f5243fbd8ec414b21c57f895f1",
+"sha": "10b0e6353f22cae29257a71d61bd21f2cc542606b43992637494b9cb250f48cd",
 "size": 100
 }
 },
@@ -125,5 +241,5 @@
 "index.html"
 ],
 "native": 2,
-"version": 1795130626
+"version": 1795132069
 }

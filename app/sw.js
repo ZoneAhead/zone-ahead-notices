@@ -26,7 +26,7 @@ self.addEventListener('fetch', e => {
       .catch(async () => (await caches.match(req, { ignoreSearch: true })) || (await caches.match(self.registration.scope)) || Response.error()));
     return;
   }
-  if (same && /\/geo\/[^/]+\.json$/.test(url.pathname)) {
+  if (same && (/\/geo\/[^/]+\.json$/.test(url.pathname) || /\/chimes\/[^/]+\.mp3$/.test(url.pathname))) {   // (chimes: 20 Nov, kept for offline drives)
     e.respondWith(caches.open(DATA).then(async c => {
       const hit = await c.match(req);
       const net = fetch(req).then(r => { if (r.ok) c.put(req, r.clone()); return r; }).catch(() => null);
