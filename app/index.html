@@ -2017,6 +2017,13 @@ html[data-theme="dark"] #navSheet .nvwait.err { color: #ff8a80; }
   html:root #menu { padding-top: calc(env(safe-area-inset-top, 0px) + 44px); }
   html:root #menu .card { height: auto; max-height: 100%; border-radius: 24px 24px 0 0; padding-top: 0; }
 }
+
+/* favourite and recent places (20 Nov 2026) */
+#navSheet .nvsec { padding: 14px 4px 4px; font: 700 .78rem/1.2 var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-top: 0 !important; }
+#navSheet .nvsec + li { border-top: 0; }
+#navSheet .nvres i.nvstar { color: #f2b01e; font-style: normal; font-size: 1.25rem; line-height: 1; display: inline-grid; place-items: center; }
+#navSheet .nvdest .nvfav { float: right; margin: 2px 0 6px 10px; padding: 8px 12px; min-height: 40px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: inherit; font: 700 .95rem/1 var(--font-body); }
+#navSheet .nvdest .nvfav[aria-pressed="true"] { color: #b07800; border-color: #f2b01e; background: rgba(242, 176, 30, .12); }
 /* ===== Simpler driving screen (11 Nov 2026, feedback: "it looks all over the place") =====
    The warning card: what it is, the street, one small line (suburb and how risky), the distance on the right.
    Off the driving screen: the icon tile, the progress bar, the badges, the "cameras ahead" count, the separate distance
@@ -6318,12 +6325,35 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
         <p class="nvnote">Directions by ${MAPS}${MAPS === 'OpenStreetMap' ? ' (© OpenStreetMap contributors)' : ''}. Camera warnings always come first.</p></div>`;
       B.appendChild(sh);
       const q = sh.querySelector('#navQ'), res = sh.querySelector('#navRes'), plan = sh.querySelector('#navPlan');
+
+      // ---------- favourite and recent places (20 Nov 2026): the phone app keeps them, the same lists as the car
+      // screen's "Go to"; older app builds (no places on the phone side) keep favourites on this page
+      const PL = { fav: [], rec: [], native: false };
+      const samePl = (a, b) => Math.abs(a.lat - b.lat) < 0.0003 && Math.abs(a.lon - b.lon) < 0.0003;
+      async function placesLoad() {
+        try { if (NV && NV.places) { const r = await NV.places(); PL.fav = (r && r.favourites) || []; PL.rec = (r && r.recents) || []; return; } } catch { }
+        try { PL.fav = JSON.parse(localStorage.getItem('za-favs') || '[]'); } catch { PL.fav = []; }
+      }
+      async function favSet(d, on) {
+        try { if (NV && NV.favourite) { const r = await NV.favourite({ lat: d.lat, lon: d.lon, name: d.name || '', address: d.address || '', on }); PL.fav = (r && r.favourites) || []; PL.rec = (r && r.recents) || []; PL.native = true; return; } } catch { }
+        PL.fav = PL.fav.filter(x => !samePl(x, d)); if (on) PL.fav.push({ name: d.name || 'Dropped pin', address: d.address || '', lat: d.lat, lon: d.lon });
+        try { localStorage.setItem('za-favs', JSON.stringify(PL.fav.slice(0, 20))); } catch { }
+      }
+      const isFav = d => PL.fav.some(x => samePl(x, d));
+      function placesShow() {
+        const rec = PL.rec.filter(r => !isFav(r)).slice(0, 6), all = PL.fav.concat(rec);
+        if (!all.length) { res.innerHTML = '<li class="nvhint">Type a place, a business or an address. Places you save show here.</li>'; return; }
+        const row = (x, i, star) => `<li><button type="button" data-p="${i}"><i class="${star ? 'nvstar' : ''}">${star ? '★' : PIN_SVG}</i><span><b>${esc(x.name || 'Dropped pin')}</b>${x.address && x.address !== x.name ? `<small>${esc(x.address)}</small>` : ''}</span></button></li>`;
+        res.innerHTML = (PL.fav.length ? '<li class="nvsec">Favourites</li>' + PL.fav.map((x, i) => row(x, i, true)).join('') : '')
+          + (rec.length ? '<li class="nvsec">Recent</li>' + rec.map((x, i) => row(x, PL.fav.length + i, false)).join('') : '');
+        res.querySelectorAll('button[data-p]').forEach(b => b.onclick = () => { const x = all[+b.dataset.p]; if (x) planTo({ lat: x.lat, lon: x.lon, name: x.name, address: x.address || '' }); });
+      }
       function sheetOpen(dest) {
         sh.hidden = false; replayIn(sh.firstElementChild);
         if (dest) return planTo(dest);
         sh.classList.remove('plan'); plan.hidden = true; res.hidden = false; q.parentElement.hidden = false;
         sh.querySelector('.nvback').hidden = true; sh.querySelector('#navTitle').textContent = 'Navigate to';
-        if (!res.innerHTML) res.innerHTML = '<li class="nvhint">Type a place, a business or an address.</li>';
+        if (!res.innerHTML || !q.value.trim()) { placesShow(); placesLoad().then(() => { if (!sh.hidden && !q.value.trim() && !sh.classList.contains('plan')) placesShow(); }); }
         setTimeout(() => q.focus(), 60);
       }
       function sheetClose() {
@@ -6345,7 +6375,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
       q.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); clearTimeout(qt); find(); q.blur(); } });
       async function find() {
         const text = q.value.trim(), n = ++NAV.seq;
-        if (text.length < 2) { res.innerHTML = '<li class="nvhint">Type a place, a business or an address.</li>'; return; }
+        if (text.length < 2) { placesShow(); return; }
         res.innerHTML = '<li class="nvhint">Searching…</li>';
         const p = here();
         let r; try { r = await NV.search(p ? { query: text, lat: p[0], lon: p[1] } : { query: text }); } catch { r = { results: [], message: 'Couldn\'t search right now. Check the connection and try again.' }; }
@@ -6370,10 +6400,17 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
           return;
         }
         NAV.prev = r;
-        plan.innerHTML = `<div class="nvdest"><b>${esc(r.name || dest.name || 'Dropped pin')}</b>${dest.address && dest.address !== r.name ? `<small>${esc(dest.address)}</small>` : ''}</div>
+        const fdest = { lat: dest.lat, lon: dest.lon, name: r.name || dest.name || '', address: dest.address || '' };
+        plan.innerHTML = `<div class="nvdest"><button class="nvfav" type="button" aria-pressed="${isFav(fdest)}">${isFav(fdest) ? '★ Saved' : '☆ Save'}</button><b>${esc(r.name || dest.name || 'Dropped pin')}</b>${dest.address && dest.address !== r.name ? `<small>${esc(dest.address)}</small>` : ''}</div>
           <div class="nvsum"><span class="nvtime">${mins(r.seconds)}</span><span class="nvdist">${esc(r.distanceText || far(r.metres))}${r.via ? ` · via ${esc(r.via)}` : ''}</span><span class="nveta">Arrive about ${clock(r.seconds)}</span></div>
           <button class="btn primary nvgo" type="button">${turnSvg('straight', 26)}<span>Start</span></button>`;
         plan.querySelector('.nvgo').onclick = go;
+        plan.querySelector('.nvfav').onclick = async e => {
+          const b = e.currentTarget, on = !isFav(fdest);
+          b.disabled = true; await favSet(fdest, on); b.disabled = false;
+          b.setAttribute('aria-pressed', String(isFav(fdest))); b.textContent = isFav(fdest) ? '★ Saved' : '☆ Save';
+          toast(isFav(fdest) ? (PL.native ? 'Saved to favourites. It\'s on the car screen too.' : 'Saved to favourites.') : 'Taken off favourites.');
+        };
         drawLine();
         if (!LIVE.on && r.line && r.line.length > 1) {   // show the whole route above the sheet
           window.ZA_NAVFIT = true; if (window.ZA_CUST && ZA_CUST.minZoomSet) ZA_CUST.minZoomSet();
