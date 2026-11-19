@@ -2687,9 +2687,24 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   // (14 Nov) A warning is never cut off half-way: a newer one waits for it to finish, and only the newest waits (one
   // that's out of date by then is dropped). Cutting "Camera zone ahead, Kil…" for the next warning sounded like a repeat.
   const SAYQ = { busy: false, next: null, tok: 0, timer: 0 };
+  // Street names as the lists write them, for the voice (19 Nov 2026): "Churchill Rd North" -> Road, "National Hwy One",
+  // "Charlton-St Arnaud Road" -> Saint, "Alford St East" -> Street, "Dr George Ellis Drive" -> Doctor, "&" -> and. The same
+  // rules as the phone engine's ZoneText.forSpeech.
+  const SPK_W = { Rd: 'Road', Hwy: 'Highway', Tce: 'Terrace', Ave: 'Avenue', Av: 'Avenue', Fwy: 'Freeway', Mwy: 'Motorway', Pde: 'Parade', Cres: 'Crescent', Cct: 'Circuit', Bvd: 'Boulevard', Blvd: 'Boulevard', Cwy: 'Carriageway', Ct: 'Court', Esp: 'Esplanade', Hts: 'Heights', Pkwy: 'Parkway', Ln: 'Lane', Mt: 'Mount' };
+  const SPK_AFTER = new Set(['North', 'South', 'East', 'West', 'Road', 'Street', 'Extension', 'Service', 'Left', 'Right']);
+  function forSpeech(text) {
+    return String(text).replace(/ & /g, ' and ').replace(/\b(Rd|Hwy|Tce|Ave|Av|Fwy|Mwy|Pde|Cres|Cct|Bvd|Blvd|Cwy|Ct|Esp|Hts|Pkwy|Ln|Mt|St|Dr)\b(?=(\s+(\S+))?)/g, (m, w, _s, next, off, all) => {
+      // Saint / Doctor only starting a name ("St Kilda Road", "Charlton-St Arnaud"), not after one ("Flinders St Station")
+      const before = all.slice(0, off).trim(), lastWord = before.split(' ').pop() || '';
+      const starts = !before || '-(.,:&/'.includes(before.slice(-1)) || !/^[A-Z]/.test(lastWord) || lastWord === 'and';
+      const nx = (next || '').replace(/^[^\w]+|[^\w]+$/g, ''), named = starts && !!next && /^[A-Z]/.test(next) && !SPK_AFTER.has(nx);
+      return w === 'St' ? (named ? 'Saint' : 'Street') : w === 'Dr' ? (named ? 'Doctor' : 'Drive') : SPK_W[w] || w;
+    });
+  }
+  window.ZA_forSpeech = forSpeech;
   function sayNow(text) {
     const tok = ++SAYQ.tok, done = () => { if (tok === SAYQ.tok) sayDone(); };
-    const u = new SpeechSynthesisUtterance(text); u.lang = 'en-AU';
+    const u = new SpeechSynthesisUtterance(forSpeech(text)); u.lang = 'en-AU';
     const v = pickVoice(); if (v) { u.voice = v; u.lang = v.lang; } u.rate = VOICE.rate; u.pitch = VOICE.pitch;
     u.onend = done; u.onerror = done;
     SAYQ.busy = true; clearTimeout(SAYQ.timer); SAYQ.timer = setTimeout(done, 12000);   // in case the end never comes
@@ -3207,6 +3222,17 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     return pts;
   }
   const streetOf = x => { if (!GEO[x.i]) return null; if (!GEO_LINES.has(x.i)) GEO_LINES.set(x.i, GEO[x.i].map(decodeLine)); return GEO_LINES.get(x.i); };
+  // (19 Nov 2026) a zone street's bounding box [south, north, west, east], once its shape is loaded: a rural zone runs for
+  // kilometres (up to 40 km) and nearly half of all zone road is over 2.3 km from its pin, so a zone is looked for by its
+  // street, not its pin (the far end of a long zone was never warned about)
+  const zoneBox = x => {
+    if (x._bb) return x._bb;
+    const ls = streetOf(x); if (!ls) return null;
+    let s = 90, n = -90, w = 180, e = -180;
+    for (const l of ls) for (const q of l) { if (q[0] < s) s = q[0]; if (q[0] > n) n = q[0]; if (q[1] < w) w = q[1]; if (q[1] > e) e = q[1]; }
+    return (x._bb = [s, n, w, e]);
+  };
+  window.ZA_zoneBox = zoneBox;
   // nearest point of the street to p (distance, the street's direction there) and the nearest entry point ahead of us
   // ===== Freeways (11 Nov 2026): the same check as the phone app's engine (ZoneCore motorwayCheck) =====
   // On a freeway carriageway (within 15-25 m, running its way, over 40 km/h): only that freeway's cameras count, from the
@@ -3431,8 +3457,12 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     if (!sameFix || !LIVE.curD) { LIVE.prevD = LIVE.curD || {}; LIVE.curD = {}; }   // each zone street's distance, this fix and the last
     const dLat = .03, dLon = .04;
     for (const x of items) {
-      if (x.lat == null || !typeOn[x.type] || Math.abs(x.lat - p[0]) > dLat || Math.abs(x.lon - p[1]) > dLon) continue;
-      const q = [x.lat, x.lon], D = dist(p, q); if (D > 3000) continue;
+      if (x.lat == null || !typeOn[x.type]) continue;
+      // a zone: near its street anywhere along it (19 Nov); a camera: near the camera
+      const bb = (x.type === 'mobile' || x.zone) ? zoneBox(x) : null;
+      if (bb) { if (p[0] < bb[0] - dLat || p[0] > bb[1] + dLat || p[1] < bb[2] - dLon || p[1] > bb[3] + dLon) continue; }
+      else if (Math.abs(x.lat - p[0]) > dLat || Math.abs(x.lon - p[1]) > dLon) continue;
+      const q = [x.lat, x.lon], D = dist(p, q); if (D > 3000 && !bb) continue;
       const ang = H == null ? 0 : angDiff(H, bearing(p, q)), sticky = curKey === (x.type === 'mobile' || x.zone ? 'm' + x.type + '|' + norm(x.street) : 'f' + (x.site ?? x.i));
       // (a red-light camera named after the freeway is at the ramps' traffic lights, off it: only one on the carriageway counts)
       if (mway && !sticky && (x.type === 'redlight' || !onMway(x.type === 'mobile' || x.zone ? [norm(x.street), ...aliasesOf(x.street)] : roadNames({ fixed: x }).filter(n => !/\bramp\b/.test(n))))) {
@@ -6224,14 +6254,18 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
         const box = q => { let s = 90, n = -90, w = 180, e = -180; for (const p of q) { s = Math.min(s, p[0]); n = Math.max(n, p[0]); w = Math.min(w, p[1]); e = Math.max(e, p[1]); } return { s, n, w, e }; };
         const B0 = box(pts), close = (p, q, m) => Math.abs(p[0] - q[0]) < m / 1e5 && Math.abs(p[1] - q[1]) < m / 8e4 && dist(p, q) < m;
         for (const x of items) {
-          if (x.lat == null || sites.has(x.i) || x.lat < B0.s - .03 || x.lat > B0.n + .03 || x.lon < B0.w - .04 || x.lon > B0.e + .04) continue;
+          if (x.lat == null || sites.has(x.i)) continue;
           if (x.type === 'mobile' || x.zone) {
-            const ls = streetOf(x); if (!ls || !pts.some(p => close(p, [x.lat, x.lon], 2500))) continue;
-            const sb = box(ls.flat()), near = pts.filter(p => p[0] > sb.s - .0003 && p[0] < sb.n + .0003 && p[1] > sb.w - .0004 && p[1] < sb.e + .0004);
+            // (19 Nov 2026) by the zone's street, not its pin: a long rural zone's pin can be kilometres from where the route
+            // meets it
+            const zb = zoneBox(x); if (!zb) continue;
+            const sb = { s: zb[0], n: zb[1], w: zb[2], e: zb[3] }, ls = streetOf(x);
+            if (sb.n < B0.s || sb.s > B0.n || sb.e < B0.w || sb.w > B0.e) continue;
+            const near = pts.filter(p => p[0] > sb.s - .0003 && p[0] < sb.n + .0003 && p[1] > sb.w - .0004 && p[1] < sb.e + .0004);
             let run = 0, best = 0;
             for (const p of near) { run = streetCheck(ls, p, null).dmin <= 15 ? run + 1 : 0; best = Math.max(best, run); }
             if (best >= 5) sites.add(x.i);
-          } else if (typeOn[x.type] && pts.some(p => close(p, [x.lat, x.lon], 25))) sites.add(x.i);
+          } else if (typeOn[x.type] && !(x.lat < B0.s - .03 || x.lat > B0.n + .03 || x.lon < B0.w - .04 || x.lon > B0.e + .04) && pts.some(p => close(p, [x.lat, x.lon], 25))) sites.add(x.i);
         }
         for (const r of reports) if (r.kind !== 'council' && !reps.has(r.id) && pts.some(p => close(p, [r.lat, r.lon], 30))) reps.add(r.id);
       }
