@@ -295,6 +295,44 @@ window.ZA_PUSH = false;
     });
     sync(); conf(); setTimeout(pickUp, 2500);
     autoSetting();
+    bannerSetting();
+  }
+
+  // Settings › "Pop-ups on CarPlay" (20 Nov 2026): warnings come up on the car screen while Waze, Google Maps or Apple Maps
+  // is in front. They need notifications allowed with "Show in CarPlay" on, and Time Sensitive on so the Driving Focus
+  // lets them through. Shows what's missing and the way to fix it. (App builds with bannerStatus only.)
+  function bannerSetting() {
+    var cfg = document.getElementById('setCfg'); if (!cfg || !D.bannerStatus) return;
+    var st = document.createElement('style');
+    st.textContent = '#zaBanGrp .zanote{margin:8px 0 0;font-size:.9375rem;line-height:1.4;color:var(--muted)}#zaBanGrp .zanote.warn{color:#b3261e;font-weight:700}#zaBanGrp .zaok{color:#0f7a55;font-weight:700}#zaBanGrp .btn{margin-top:10px;min-height:48px;width:100%}';
+    document.head.appendChild(st);
+    var S = null;
+    function html() {
+      var note, ok = false, btn = '';
+      if (!S) note = 'Checking…';
+      else if (S.auth === 'notDetermined') { note = 'Allow notifications so camera warnings can pop up on the car screen when another app (Waze, Google Maps, Apple Maps) is in front.'; btn = '<button class="btn primary" type="button" id="zaBanAsk">Allow</button>'; }
+      else if (S.auth === 'denied' || S.alerts === 'disabled') { note = 'Notifications are off for Zone Ahead. Settings › Notifications › Zone Ahead: turn on Allow Notifications and Show in CarPlay.'; btn = '<button class="btn" type="button" id="zaBanSet">Open Settings</button>'; }
+      else if (S.carPlay === 'disabled') { note = 'Turn on <b>Show in CarPlay</b>: Settings › Notifications › Zone Ahead.'; btn = '<button class="btn" type="button" id="zaBanSet">Open Settings</button>'; }
+      else if (S.timeSensitive === 'disabled') { note = 'Turn on <b>Time Sensitive Notifications</b> (Settings › Notifications › Zone Ahead), so warnings still pop up with the Driving Focus on.'; btn = '<button class="btn" type="button" id="zaBanSet">Open Settings</button>'; }
+      else { ok = true; note = '<span class="zaok">✓ On.</span> With another app on the car screen, each warning also pops up there (once Zone Ahead has been opened on the car, or Drive is on). If your Driving Focus hides them: Settings › Focus › Driving › Apps, and allow Time Sensitive notifications.'; }
+      return '<b>Pop-ups on CarPlay</b><p class="zanote' + (!ok && S && S.auth !== 'notDetermined' ? ' warn' : '') + '">' + note + '</p>' + btn;
+    }
+    function draw() {
+      var g = document.getElementById('zaBanGrp');
+      if (!g) {
+        var after = cfg.querySelector('#volGrp') || cfg.querySelector('#sndGrp'); if (!after) return;
+        g = document.createElement('div'); g.className = 'setgrp'; g.id = 'zaBanGrp'; after.after(g);
+      }
+      var h = html(); if (g.dataset.h === h) return;
+      g.innerHTML = h; g.dataset.h = h;
+      var a = g.querySelector('#zaBanAsk'); if (a) a.onclick = function () { (D.bannerAsk ? D.bannerAsk() : Promise.reject()).then(set).catch(function () { }); };
+      var b = g.querySelector('#zaBanSet'); if (b) b.onclick = function () { D.openSettings().catch(function () { }); };
+    }
+    function set(r) { if (r) S = r; draw(); }
+    function check() { D.bannerStatus().then(set).catch(function () { }); }
+    new MutationObserver(function () { if (!document.getElementById('zaBanGrp')) draw(); }).observe(cfg, { childList: true });
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') check(); });
+    check(); draw();
   }
 
   // Settings › "Start by itself when you drive": replaces the web version's Shortcuts instructions with a real switch.

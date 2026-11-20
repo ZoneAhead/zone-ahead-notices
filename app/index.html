@@ -1934,8 +1934,10 @@ body:not(.carmode) #aheadChip { display: none !important; }
 #sndGrp .rate.rate3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 #sndGrp .rate.chimes { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 #sndGrp .rate button { min-height: 44px; padding: 4px 6px; line-height: 1.15; }
-#sndGrp .chimetry { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 4px; }
-#sndGrp .chimetry .btn { min-height: 38px; padding: 0 10px; font-size: .85rem; }
+#sndGrp .chimetry { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 6px 0 4px; }
+#sndGrp .chimetry .btn { min-height: 48px; padding: 6px 10px; font-size: .85rem; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; text-align: left; line-height: 1.2; }
+#sndGrp .chimetry .ct { font-weight: 700; }
+#sndGrp .chimetry .ch { font-size: .75rem; font-weight: 500; opacity: .75; }
 #volGrp .rate { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
 #volGrp .rate button { min-height: 44px; padding: 4px 6px; line-height: 1.15; }
 /* ===== Directions (iPhone app only, 8 Nov 2026): search sheet, "Navigate here", the slim turn line ===== */
@@ -2603,6 +2605,11 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   }
   const FX_BIG = { speed: 'Speed camera', redlight: 'Red-light camera', p2p: 'Average speed', phone: 'Phone camera' };
   const FX_SAY = { speed: 'Fixed speed camera', redlight: 'Red light camera', p2p: 'Average speed camera', phone: 'Mobile phone camera' };
+  // (20 Nov 2026) the chime for each kind of camera or report (map/make_chimes.py): heard without a voice
+  const FX_CHIME = { speed: 'fixed', redlight: 'red', p2p: 'p2p', phone: 'phone' };
+  const fxChime = f => FX_CHIME[f && f.type] || 'fixed';
+  const repChime = (r, here) => r && r.kind === 'police' ? 'police' : r && r.kind === 'camera' ? (here ? 'zone' : 'ahead') : 'report';
+  const zoneChime = z => z && z.x && z.x.type === 'phone' ? 'phone' : 'ahead';
   function evaluate(k) {
     const AHEAD = warnFor(S.r.spd[k]);
     const d = S.d, here = z => d >= z.start - 5 && d <= z.end + 5, soon = z => z.start > d && z.start - d <= (z.proven ? provAhead(AHEAD) : AHEAD) && onRoad(z, d);
@@ -2664,12 +2671,12 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
       if (S.playing) {
         const in100 = Math.round((z ? z.start - d : 0) / 100) * 100;
         const inM = in100 >= 150 ? `, in ${in100} metres` : '';   // too close to be worth a distance: the zone alert follows straight away
-        if (kind === 'rephere') { chime('report'); say(`${KIND[z.rep.kind].name} reported here.`); }
+        if (kind === 'rephere') { chime(repChime(z.rep, true)); say(`${KIND[z.rep.kind].name} reported here.`); }
         else if (kind === 'fixhere') { chime('fixhere'); say(z.fixed.type === 'p2p' ? `Average speed section${p2pEnd(z.fixed)}.` : `${FX_SAY[z.fixed.type]}.`); }
-        else if (kind === 'repahead') { chime('report'); say(`${KIND[z.rep.kind].name} reported ahead${z.rep.street ? ', ' + z.rep.street : ''}${inM}.`); }
-        else if (kind === 'fixahead') { chime('fixed'); say(`${FX_SAY[z.fixed.type]} ahead${inM}.`); }
+        else if (kind === 'repahead') { chime(repChime(z.rep)); say(`${KIND[z.rep.kind].name} reported ahead${z.rep.street ? ', ' + z.rep.street : ''}${inM}.`); }
+        else if (kind === 'fixahead') { chime(fxChime(z.fixed)); say(`${FX_SAY[z.fixed.type]} ahead${inM}.`); }
         else if (kind === 'zone') zoneAnnounce(z, prev, st);
-        else if (kind === 'ahead') { chime('ahead'); say(z.x.type === 'phone' ? `Phone and seatbelt camera zone ahead. ${z.x.street}${inM}.` : provOf(z) ? `Proven camera hotspot ahead. ${z.x.street}${inM}.` : `Possible camera zone ahead. ${z.x.street}${inM}.`); }
+        else if (kind === 'ahead') { chime(zoneChime(z)); say(z.x.type === 'phone' ? `Phone and seatbelt camera zone ahead. ${z.x.street}${inM}.` : provOf(z) ? `Proven camera hotspot ahead. ${z.x.street}${inM}.` : `Possible camera zone ahead. ${z.x.street}${inM}.`); }
         else if (kind === 'done') say('You have arrived.');
         else if (kind === 'section' && !prev.startsWith('section') && !prev.startsWith('fixhere')) say(`Average speed section${sec.heavy ? ', heavy vehicles only' : ''}.`);
       }
@@ -2681,6 +2688,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   // (20 Nov 2026) chimes: each kind of alert its own sound, in the chosen style (Settings), from chimes/<style>-<name>.mp3
   // (map/make_chimes.py), matched to a music track's loudness. In the phone app they play through the app (so they reach
   // the car's speakers and follow the music's volume); on the web from the file; the old beeps if neither works.
+  // (chimes/…mp3?v=2: a tune per camera kind, 20 Nov; the query skips older saved copies)
   const CHIMES = { buf: {}, native: null };
   function chime(n) {
     if (!S.voice || quiet()) return;
@@ -2701,7 +2709,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
       if (actx.state === 'suspended' && actx.resume) actx.resume();
       const key = st + '-' + name;
       let b = CHIMES.buf[key];
-      if (!b) { const r = await fetch('chimes/' + key + '.mp3'); if (!r.ok) throw 0; const ab = await r.arrayBuffer(); b = CHIMES.buf[key] = await new Promise((ok, no) => actx.decodeAudioData(ab, ok, no)); }
+      if (!b) { const r = await fetch('chimes/' + key + '.mp3?v=2'); if (!r.ok) throw 0; const ab = await r.arrayBuffer(); b = CHIMES.buf[key] = await new Promise((ok, no) => actx.decodeAudioData(ab, ok, no)); }
       const src = actx.createBufferSource(), g = actx.createGain();
       g.gain.value = Math.min(1, window.ZA_VOL || 1); src.buffer = b; src.connect(g); g.connect(actx.destination); src.start();
     } catch { oscChime(name); }
@@ -3615,12 +3623,12 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     // (14 Nov) its "ahead" was said moments ago: coming into it is the tone only (two sentences back to back sounded like a repeat)
     const justAhead = () => !!(LIVE.aheadSaid && LIVE.aheadSaid.id === zid && Date.now() - LIVE.aheadSaid.t < 8000);
     const saidAhead = () => { LIVE.aheadSaid = { id: zid, t: Date.now() }; };
-    if (kind === 'rephere') onceSay('here|' + zid, () => { chime('report'); if (!justAhead()) say(`${KIND[z.rep.kind].name} reported here.`); });
+    if (kind === 'rephere') onceSay('here|' + zid, () => { chime(repChime(z.rep, true)); if (!justAhead()) say(`${KIND[z.rep.kind].name} reported here.`); });
     else if (kind === 'fixhere') onceSay('here|' + zid, () => { chime('fixhere'); if (!justAhead()) say(z.fixed.type === 'p2p' ? 'Average speed camera.' : `${FX_SAY[z.fixed.type]}.`); });
-    else if (kind === 'repahead') onceSay('ahead|' + zid, () => { saidAhead(); chime('report'); say(`${KIND[z.rep.kind].name} reported ahead${z.rep.street ? ', ' + z.rep.street : ''}${inM}.`); });
-    else if (kind === 'fixahead') onceSay('ahead|' + zid, () => { saidAhead(); chime('fixed'); say(`${FX_SAY[z.fixed.type]} ahead${inM}.`); });
+    else if (kind === 'repahead') onceSay('ahead|' + zid, () => { saidAhead(); chime(repChime(z.rep)); say(`${KIND[z.rep.kind].name} reported ahead${z.rep.street ? ', ' + z.rep.street : ''}${inM}.`); });
+    else if (kind === 'fixahead') onceSay('ahead|' + zid, () => { saidAhead(); chime(fxChime(z.fixed)); say(`${FX_SAY[z.fixed.type]} ahead${inM}.`); });
     else if (kind === 'zone') zoneAnnounce(z, prev, st, zid, justAhead());
-    else if (kind === 'ahead') onceSay('ahead|' + zid, () => { saidAhead(); chime('ahead'); say(z.x.type === 'phone' ? `Phone and seatbelt camera zone ahead. ${z.x.street}${inM}.` : provOf(z) ? `Proven camera hotspot ahead. ${z.x.street}${inM}.` : `Possible camera zone ahead. ${z.x.street}${inM}.`); });
+    else if (kind === 'ahead') onceSay('ahead|' + zid, () => { saidAhead(); chime(zoneChime(z)); say(z.x.type === 'phone' ? `Phone and seatbelt camera zone ahead. ${z.x.street}${inM}.` : provOf(z) ? `Proven camera hotspot ahead. ${z.x.street}${inM}.` : `Possible camera zone ahead. ${z.x.street}${inM}.`); });
     else if (kind === 'section' && !/^(section|fixhere)/.test(prev)) onceSay('here|sec:' + sec.group, () => say(`Average speed section${sec.heavy ? ', heavy vehicles only' : ''}.`));
   }
 
@@ -5091,6 +5099,11 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   $('voiceBox').before(setBox);
   const LEVELS = { all: ['Everything', 'An alert for every camera zone, fixed camera and report.'], important: ['Important only', 'Alerts only for fixed cameras, live reports, proven and high-risk hotspots and phone zones. Other zones show on screen quietly.'] };
   const VOICES = { off: ['Chimes only', 'A chime for each alert, a different one for each kind. No voice (directions still speak).'], fixed: ['Voice for fixed cameras', 'Chimes for camera zones; the voice for fixed cameras and driver reports.'], on: ['Voice for everything', 'A chime, then the voice, for each alert.'] };
+  // the sound guide (20 Nov 2026): every alert's tune, with a hint for remembering it (map/make_chimes.py)
+  const CHIME_GUIDE = [['ahead', 'Hidden camera ahead', 'three notes up'], ['zone', 'In a camera zone', 'quick repeats'], ['phone', 'Phone / seatbelt camera', 'a ring'],
+    ['fixed', 'Fixed speed camera', 'high-low, high-low'], ['red', 'Red-light camera', 'three notes down'], ['p2p', 'Average speed section', 'two long notes'],
+    ['fixhere', 'At the camera', 'three quick high'], ['police', 'Police reported', 'low, low, high'], ['report', 'Hazard reported', 'two notes down'],
+    ['ended', 'Zone ended', 'soft finish'], ['over', 'Over the limit', 'three low']];
   const CHIME_STYLES = { radar: ['Radar', 'Short bright beeps in quick bursts, like a radar detector'], classic: ['Classic', 'Clean two-note chimes'], soft: ['Soft', 'Low, rounded notes'], bell: ['Bell', 'A two-note bell'] };
   function setDraw() {
     const c = $('setCfg'), P = QOL.places;
@@ -5098,8 +5111,8 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     c.innerHTML = `<div class="setgrp"><b>Alerts</b><div class="rate" role="group" aria-label="Alert level">${Object.entries(LEVELS).map(([k, v]) => `<button type="button" data-lvl="${k}" aria-pressed="${QOL.alerts === k}">${v[0]}</button>`).join('')}</div><p class="sub">${(LEVELS[QOL.alerts] || LEVELS.all)[1]}</p></div>
       <div class="setgrp" id="sndGrp"><b>Sound</b><div class="rate rate3" role="group" aria-label="Voice">${Object.entries(VOICES).map(([k, v]) => `<button type="button" data-voice="${k}" aria-pressed="${QOL.voice === k}">${v[0]}</button>`).join('')}</div><p class="sub">${VOICES[QOL.voice][1]}</p>
         <b class="volsub">Chime</b><div class="rate chimes" role="group" aria-label="Chime sound">${Object.entries(CHIME_STYLES).map(([k, v]) => `<button type="button" data-chime="${k}" aria-pressed="${QOL.chime === k}" title="${v[1]}">${v[0]}</button>`).join('')}</div>
-        <p class="sub">${CHIME_STYLES[QOL.chime][1]}. Tap one to hear it; each kind of alert has its own sound.</p>
-        <div class="chimetry">${[['ahead', 'Zone ahead'], ['zone', 'In a zone'], ['fixed', 'Fixed camera'], ['report', 'Report'], ['ended', 'Zone ended']].map(([k, t]) => `<button class="btn" type="button" data-try="${k}">${t}</button>`).join('')}</div>
+        <p class="sub">${CHIME_STYLES[QOL.chime][1]}. Each kind of camera has its own tune, so you know what's ahead without the voice. Tap to learn them:</p>
+        <div class="chimetry">${CHIME_GUIDE.map(([k, t, h]) => `<button class="btn" type="button" data-try="${k}"><span class="ct">${t}</span><span class="ch">${h}</span></button>`).join('')}</div>
         ${QOL.voice === 'off' ? '' : `<b class="volsub">Busy areas</b><div class="rate" role="group" aria-label="Busy areas"><button type="button" data-busy="chime" aria-pressed="${QOL.busy !== 'voice'}">Chime instead</button><button type="button" data-busy="voice" aria-pressed="${QOL.busy === 'voice'}">Keep the voice</button></div>
         <p class="sub">${QOL.busy === 'voice' ? 'Every zone is said, however many come close together.' : 'After three zones in a minute and a half, zones chime without the voice for 3 minutes, so it doesn\'t keep talking where cameras are close together. Fixed cameras are still said.'}</p>`}</div>
       ${volHtml()}

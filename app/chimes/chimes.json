@@ -1,1 +1,1 @@
-{"styles": ["radar", "classic", "soft", "bell"], "alerts": ["ahead", "zone", "fixed", "fixhere", "report", "ended", "over"], "lufs": -16.0}
+{"styles": ["radar", "classic", "soft", "bell"], "alerts": ["ahead", "zone", "phone", "fixed", "red", "p2p", "fixhere", "police", "report", "ended", "over"], "lufs": -16.0}
