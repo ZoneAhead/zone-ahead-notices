@@ -312,7 +312,8 @@ window.ZA_PUSH = false;
       if (!S) note = 'Checking…';
       else if (S.auth === 'notDetermined') { note = 'Allow notifications so camera warnings can pop up on the car screen when another app (Waze, Google Maps, Apple Maps) is in front.'; btn = '<button class="btn primary" type="button" id="zaBanAsk">Allow</button>'; }
       else if (S.auth === 'denied' || S.alerts === 'disabled') { note = 'Notifications are off for Zone Ahead. Settings › Notifications › Zone Ahead: turn on Allow Notifications and Show in CarPlay.'; btn = '<button class="btn" type="button" id="zaBanSet">Open Settings</button>'; }
-      else if (S.carPlay === 'disabled') { note = 'Turn on <b>Show in CarPlay</b>: Settings › Notifications › Zone Ahead.'; btn = '<button class="btn" type="button" id="zaBanSet">Open Settings</button>'; }
+      else if (S.carPlay === 'notSupported' && !S.asked) { note = 'Camera warnings aren\'t allowed on the car screen yet.'; btn = '<button class="btn primary" type="button" id="zaBanAsk">Allow on CarPlay</button>'; }
+      else if (S.carPlay !== 'enabled') { note = 'Turn on <b>Show in CarPlay</b>: Settings › Notifications › Zone Ahead. (It appears there once CarPlay has been connected.)'; btn = '<button class="btn" type="button" id="zaBanSet">Open Settings</button>'; }
       else if (S.timeSensitive === 'disabled') { note = 'Turn on <b>Time Sensitive Notifications</b> (Settings › Notifications › Zone Ahead), so warnings still pop up with the Driving Focus on.'; btn = '<button class="btn" type="button" id="zaBanSet">Open Settings</button>'; }
       else { ok = true; note = '<span class="zaok">✓ On.</span> With another app on the car screen, each warning also pops up there (once Zone Ahead has been opened on the car, or Drive is on). If your Driving Focus hides them: Settings › Focus › Driving › Apps, and allow Time Sensitive notifications.'; }
       return '<b>Pop-ups on CarPlay</b><p class="zanote' + (!ok && S && S.auth !== 'notDetermined' ? ' warn' : '') + '">' + note + '</p>' + btn;
@@ -325,7 +326,7 @@ window.ZA_PUSH = false;
       }
       var h = html(); if (g.dataset.h === h) return;
       g.innerHTML = h; g.dataset.h = h;
-      var a = g.querySelector('#zaBanAsk'); if (a) a.onclick = function () { (D.bannerAsk ? D.bannerAsk() : Promise.reject()).then(set).catch(function () { }); };
+      var a = g.querySelector('#zaBanAsk'); if (a) a.onclick = function () { (D.bannerAsk ? D.bannerAsk() : Promise.reject()).then(function (r) { if (r) r.asked = true; set(r); }).catch(function () { }); };
       var b = g.querySelector('#zaBanSet'); if (b) b.onclick = function () { D.openSettings().catch(function () { }); };
     }
     function set(r) { if (r) S = r; draw(); }
