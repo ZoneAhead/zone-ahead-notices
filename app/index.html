@@ -5111,11 +5111,11 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   $('voiceBox').before(setBox);
   const LEVELS = { all: ['Everything', 'An alert for every camera zone, fixed camera and report.'], important: ['Important only', 'Alerts only for fixed cameras, live reports, proven and high-risk hotspots and phone zones. Other zones show on screen quietly.'] };
   const VOICES = { off: ['Chimes only', 'A chime for each alert, a different one for each kind. No voice (directions still speak).'], fixed: ['Voice for fixed cameras', 'Chimes for camera zones; the voice for fixed cameras and driver reports.'], on: ['Voice for everything', 'A chime, then the voice, for each alert.'] };
-  // the sound guide (20 Nov 2026): every alert's tune, with a hint for remembering it (map/make_chimes.py)
-  const CHIME_GUIDE = [['ahead', 'Hidden camera ahead', '3 notes up'], ['zone', 'In a camera zone', 'quick repeats'], ['phone', 'Phone & seatbelt camera', 'a ring'],
-    ['fixed', 'Fixed speed camera', 'high-low ×3'], ['red', 'Red-light camera', '3 notes down'], ['p2p', 'Average speed section', '2 long notes'],
-    ['fixhere', 'At the camera', '3 quick, high'], ['police', 'Police reported', 'low, low, high'], ['report', 'Hazard reported', '2 notes down'],
-    ['ended', 'Zone ended', 'soft finish'], ['over', 'Over the limit', '3 low notes']];
+  // the sound guide (21 Nov 2026): a hidden camera's three alerts first, then the cameras most often met (counted in
+  // native-zones.json: red-light 896, phone 462, fixed speed 295, average speed 97), then reports and the speed limit
+  const CHIME_GUIDE = [['ahead', 'Hidden camera ahead'], ['zone', 'In a camera zone'], ['ended', 'Zone ended'],
+    ['red', 'Red-light camera'], ['phone', 'Phone & seatbelt camera'], ['fixed', 'Fixed speed camera'], ['p2p', 'Average speed section'],
+    ['fixhere', 'At the camera'], ['police', 'Police reported'], ['report', 'Hazard reported'], ['over', 'Over the speed limit']];
   let chimeGuideOpen = false;
   const CHIME_STYLES = { radar: ['Radar', 'Short bright beeps in quick bursts, like a radar detector'], classic: ['Classic', 'Clean two-note chimes'], soft: ['Soft', 'Low, rounded notes'], bell: ['Bell', 'A two-note bell'] };
   function setDraw() {
@@ -5126,7 +5126,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
         <b class="volsub">Chime</b><div class="rate chimes" role="group" aria-label="Chime sound">${Object.entries(CHIME_STYLES).map(([k, v]) => `<button type="button" data-chime="${k}" aria-pressed="${QOL.chime === k}" title="${v[1]}">${v[0]}</button>`).join('')}</div>
         <p class="sub">${CHIME_STYLES[QOL.chime][1]}. Each kind of camera has its own tune.</p>
         <details class="chimeguide"${chimeGuideOpen ? ' open' : ''}><summary>Hear each alert</summary>
-          <ul>${CHIME_GUIDE.map(([k, t, h]) => `<li><button type="button" data-try="${k}" aria-label="Play: ${t}"><span class="cp" aria-hidden="true"></span><span class="ct">${t}</span><span class="ch">${h}</span></button></li>`).join('')}</ul></details>
+          <ul>${CHIME_GUIDE.map(([k, t]) => `<li><button type="button" data-try="${k}" aria-label="Play: ${t}"><span class="cp" aria-hidden="true"></span><span class="ct">${t}</span></button></li>`).join('')}</ul></details>
         ${QOL.voice === 'off' ? '' : `<b class="volsub">Busy areas</b><div class="rate" role="group" aria-label="Busy areas"><button type="button" data-busy="chime" aria-pressed="${QOL.busy !== 'voice'}">Chime instead</button><button type="button" data-busy="voice" aria-pressed="${QOL.busy === 'voice'}">Keep the voice</button></div>
         <p class="sub">${QOL.busy === 'voice' ? 'Every zone is said, however many come close together.' : 'After three zones in a minute and a half, zones chime without the voice for 3 minutes, so it doesn\'t keep talking where cameras are close together. Fixed cameras are still said.'}</p>`}</div>
       ${volHtml()}
