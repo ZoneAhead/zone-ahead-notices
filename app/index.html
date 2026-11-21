@@ -1934,10 +1934,22 @@ body:not(.carmode) #aheadChip { display: none !important; }
 #sndGrp .rate.rate3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 #sndGrp .rate.chimes { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 #sndGrp .rate button { min-height: 44px; padding: 4px 6px; line-height: 1.15; }
-#sndGrp .chimetry { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; margin: 6px 0 4px; }
-#sndGrp .chimetry .btn { min-height: 48px; padding: 6px 10px; font-size: .85rem; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; text-align: left; line-height: 1.2; }
-#sndGrp .chimetry .ct { font-weight: 700; }
-#sndGrp .chimetry .ch { font-size: .75rem; font-weight: 500; opacity: .75; }
+/* the sound guide (21 Nov 2026): one quiet row that opens into a compact list */
+#sndGrp .chimeguide { display: block; width: 100%; box-sizing: border-box; margin: 10px 0 2px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+#sndGrp .chimeguide summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; padding: 0 16px 0 14px; font-weight: 700; color: var(--fg); cursor: pointer; }
+#sndGrp .chimeguide summary::-webkit-details-marker { display: none; }
+#sndGrp .chimeguide summary::after { content: ""; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translate(-2px, -2px); transition: transform .2s; }
+#sndGrp .chimeguide[open] summary::after { transform: rotate(-135deg) translate(-2px, -2px); }
+#sndGrp .chimeguide ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+#sndGrp .chimeguide li + li { border-top: 1px solid var(--line); }
+#sndGrp .chimeguide li button { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 46px; padding: 0 14px; background: none; border: 0; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+#sndGrp .chimeguide li button:active, #sndGrp .chimeguide li button.on { background: var(--surface-2); }
+#sndGrp .chimeguide .cp { flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); position: relative; }
+#sndGrp .chimeguide .cp::before { content: ""; position: absolute; left: 10px; top: 8px; border-left: 8px solid var(--on-accent); border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+#sndGrp .chimeguide .on .cp { animation: cgPulse .8s ease-out 2; }
+@keyframes cgPulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
+#sndGrp .chimeguide .ct { flex: 1; min-width: 0; font-size: .95rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#sndGrp .chimeguide .ch { flex: none; font-size: .8rem; color: var(--muted); }
 #volGrp .rate { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
 #volGrp .rate button { min-height: 44px; padding: 4px 6px; line-height: 1.15; }
 /* ===== Directions (iPhone app only, 8 Nov 2026): search sheet, "Navigate here", the slim turn line ===== */
@@ -5100,10 +5112,11 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   const LEVELS = { all: ['Everything', 'An alert for every camera zone, fixed camera and report.'], important: ['Important only', 'Alerts only for fixed cameras, live reports, proven and high-risk hotspots and phone zones. Other zones show on screen quietly.'] };
   const VOICES = { off: ['Chimes only', 'A chime for each alert, a different one for each kind. No voice (directions still speak).'], fixed: ['Voice for fixed cameras', 'Chimes for camera zones; the voice for fixed cameras and driver reports.'], on: ['Voice for everything', 'A chime, then the voice, for each alert.'] };
   // the sound guide (20 Nov 2026): every alert's tune, with a hint for remembering it (map/make_chimes.py)
-  const CHIME_GUIDE = [['ahead', 'Hidden camera ahead', 'three notes up'], ['zone', 'In a camera zone', 'quick repeats'], ['phone', 'Phone / seatbelt camera', 'a ring'],
-    ['fixed', 'Fixed speed camera', 'high-low, high-low'], ['red', 'Red-light camera', 'three notes down'], ['p2p', 'Average speed section', 'two long notes'],
-    ['fixhere', 'At the camera', 'three quick high'], ['police', 'Police reported', 'low, low, high'], ['report', 'Hazard reported', 'two notes down'],
-    ['ended', 'Zone ended', 'soft finish'], ['over', 'Over the limit', 'three low']];
+  const CHIME_GUIDE = [['ahead', 'Hidden camera ahead', '3 notes up'], ['zone', 'In a camera zone', 'quick repeats'], ['phone', 'Phone & seatbelt camera', 'a ring'],
+    ['fixed', 'Fixed speed camera', 'high-low ×3'], ['red', 'Red-light camera', '3 notes down'], ['p2p', 'Average speed section', '2 long notes'],
+    ['fixhere', 'At the camera', '3 quick, high'], ['police', 'Police reported', 'low, low, high'], ['report', 'Hazard reported', '2 notes down'],
+    ['ended', 'Zone ended', 'soft finish'], ['over', 'Over the limit', '3 low notes']];
+  let chimeGuideOpen = false;
   const CHIME_STYLES = { radar: ['Radar', 'Short bright beeps in quick bursts, like a radar detector'], classic: ['Classic', 'Clean two-note chimes'], soft: ['Soft', 'Low, rounded notes'], bell: ['Bell', 'A two-note bell'] };
   function setDraw() {
     const c = $('setCfg'), P = QOL.places;
@@ -5111,8 +5124,9 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     c.innerHTML = `<div class="setgrp"><b>Alerts</b><div class="rate" role="group" aria-label="Alert level">${Object.entries(LEVELS).map(([k, v]) => `<button type="button" data-lvl="${k}" aria-pressed="${QOL.alerts === k}">${v[0]}</button>`).join('')}</div><p class="sub">${(LEVELS[QOL.alerts] || LEVELS.all)[1]}</p></div>
       <div class="setgrp" id="sndGrp"><b>Sound</b><div class="rate rate3" role="group" aria-label="Voice">${Object.entries(VOICES).map(([k, v]) => `<button type="button" data-voice="${k}" aria-pressed="${QOL.voice === k}">${v[0]}</button>`).join('')}</div><p class="sub">${VOICES[QOL.voice][1]}</p>
         <b class="volsub">Chime</b><div class="rate chimes" role="group" aria-label="Chime sound">${Object.entries(CHIME_STYLES).map(([k, v]) => `<button type="button" data-chime="${k}" aria-pressed="${QOL.chime === k}" title="${v[1]}">${v[0]}</button>`).join('')}</div>
-        <p class="sub">${CHIME_STYLES[QOL.chime][1]}. Each kind of camera has its own tune, so you know what's ahead without the voice. Tap to learn them:</p>
-        <div class="chimetry">${CHIME_GUIDE.map(([k, t, h]) => `<button class="btn" type="button" data-try="${k}"><span class="ct">${t}</span><span class="ch">${h}</span></button>`).join('')}</div>
+        <p class="sub">${CHIME_STYLES[QOL.chime][1]}. Each kind of camera has its own tune.</p>
+        <details class="chimeguide"${chimeGuideOpen ? ' open' : ''}><summary>Hear each alert</summary>
+          <ul>${CHIME_GUIDE.map(([k, t, h]) => `<li><button type="button" data-try="${k}" aria-label="Play: ${t}"><span class="cp" aria-hidden="true"></span><span class="ct">${t}</span><span class="ch">${h}</span></button></li>`).join('')}</ul></details>
         ${QOL.voice === 'off' ? '' : `<b class="volsub">Busy areas</b><div class="rate" role="group" aria-label="Busy areas"><button type="button" data-busy="chime" aria-pressed="${QOL.busy !== 'voice'}">Chime instead</button><button type="button" data-busy="voice" aria-pressed="${QOL.busy === 'voice'}">Keep the voice</button></div>
         <p class="sub">${QOL.busy === 'voice' ? 'Every zone is said, however many come close together.' : 'After three zones in a minute and a half, zones chime without the voice for 3 minutes, so it doesn\'t keep talking where cameras are close together. Fixed cameras are still said.'}</p>`}</div>
       ${volHtml()}
@@ -5132,7 +5146,12 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     c.querySelectorAll('[data-lvl]').forEach(b => b.onclick = () => { QOL.alerts = b.dataset.lvl; qolSave(); setDraw(); toast(`Alerts: ${LEVELS[QOL.alerts][0]}.`); });
     c.querySelectorAll('[data-voice]').forEach(b => b.onclick = () => { QOL.voice = b.dataset.voice; qolSave(); setDraw(); toast(`Sound: ${VOICES[QOL.voice][0]}.`); });
     c.querySelectorAll('[data-chime]').forEach(b => b.onclick = () => { QOL.chime = b.dataset.chime; qolSave(); setDraw(); playChime('ahead', QOL.chime); });
-    c.querySelectorAll('[data-try]').forEach(b => b.onclick = () => playChime(b.dataset.try, QOL.chime));
+    c.querySelectorAll('[data-try]').forEach(b => b.onclick = () => {
+      c.querySelectorAll('[data-try].on').forEach(x => x.classList.remove('on'));
+      b.classList.add('on'); clearTimeout(b._t); b._t = setTimeout(() => b.classList.remove('on'), 1600);
+      playChime(b.dataset.try, QOL.chime);
+    });
+    const cg = c.querySelector('.chimeguide'); if (cg) cg.ontoggle = () => { chimeGuideOpen = cg.open; };
     c.querySelectorAll('[data-busy]').forEach(b => b.onclick = () => { QOL.busy = b.dataset.busy; qolSave(); setDraw(); });
     volWire(c);
     carPickWire(c);
