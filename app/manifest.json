@@ -273,15 +273,23 @@
 "size": 5048
 },
 "index.html": {
-"sha": "814c71406caad67ee4bdd9b07c782938ad24a2f6f087839f2fe4fecbfcc046b3",
-"size": 1975833
+"sha": "80878b71b54cd9f634ba6c0965ccf6801e85e041ab67149f5c5c745f87e9a8a7",
+"size": 1976620
 },
 "manifest.webmanifest": {
 "sha": "e4fa360f27dd5f78cbfc7b667ab278eebb2bc9ee99495497f390613f040ac4ce",
 "size": 519
 },
+"mapstyle/za-dark.json": {
+"sha": "a3047dd5fc4ca5fd332fa2291d5b34b2b17d7248ea1b0be073870ad53c44663c",
+"size": 21124
+},
+"mapstyle/za-light.json": {
+"sha": "d97730f92872c38b2fbc59ac718223bedfbe340b5a296452881e6923bb344aca",
+"size": 40502
+},
 "native-zones.json": {
-"sha": "023f397183db23304d4640c333df8e14ecfa5c2c5e51c4cfa04314feca6d89c4",
+"sha": "6aeb1be6f970821134e382f87c5dc5fa64294d01f46aff7e1d4b0b17f8ed3bf4",
 "size": 3819463
 },
 "native.js": {
@@ -297,7 +305,7 @@
 "size": 2717
 },
 "web-version.json": {
-"sha": "9731e4e2cc76416b4622a6bb7c4a59cb3a49bcac56de00374e4c6eeacea1a4a0",
+"sha": "84ede38f7497e5e5f94e24074bd5a45cb2824594fe324141e6906a0b3b8b1def",
 "size": 100
 }
 },
@@ -305,5 +313,5 @@
 "index.html"
 ],
 "native": 2,
-"version": 1795247460
+"version": 1795252293
 }

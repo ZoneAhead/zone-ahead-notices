@@ -4355,7 +4355,9 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     + '<button type="button" class="d3b" id="d3toggle"></button>';
   document.body.appendChild(d3ctl);
   const driving3 = () => (typeof LIVE !== 'undefined' && LIVE.on) || !!(S.mode && S.r);
-  const d3style = () => 'https://tiles.openfreemap.org/styles/' + (isDark() ? 'dark' : 'liberty');
+  // (21 Nov 2026) OpenFreeMap's styles with bolder, brighter roads and no shop icons (map/make_mapstyle.py): the same
+  // files the CarPlay map loads, so the phone and the car look the same
+  const d3style = () => new URL('mapstyle/za-' + (isDark() ? 'dark' : 'light') + '.json', location.href).href;
 
   function mlLoad() {
     if (window.maplibregl) return Promise.resolve();
@@ -4411,8 +4413,8 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     if ((st === 'carbon' || st === 'tri') && m.getLayer('background')) m.setPaintProperty('background', 'background-color', css('--bg'));
     const empty = { type: 'FeatureCollection', features: [] };
     for (const s of ['za-route', 'za-zones', 'za-points']) if (!m.getSource(s)) m.addSource(s, { type: 'geojson', data: empty });
-    m.addLayer({ id: 'za-route-case', type: 'line', source: 'za-route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': dark ? '#0b1117' : '#ffffff', 'line-width': 13, 'line-opacity': .9 } }, before);
-    m.addLayer({ id: 'za-route', type: 'line', source: 'za-route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#2563eb', 'line-width': 8 } }, before);
+    m.addLayer({ id: 'za-route-case', type: 'line', source: 'za-route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': dark ? '#0b1117' : '#ffffff', 'line-width': 17, 'line-opacity': .9 } }, before);
+    m.addLayer({ id: 'za-route', type: 'line', source: 'za-route', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': dark ? '#3b82f6' : '#2563eb', 'line-width': 11 } }, before);   // (21 Nov: bolder)
     m.addLayer({ id: 'za-zone-glow', type: 'line', source: 'za-zones', layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': ['get', 'c'], 'line-width': ['case', ['get', 'hot'], 26, 16], 'line-opacity': ['case', ['get', 'hot'], .45, .25], 'line-blur': 6 } }, before);
     m.addLayer({ id: 'za-zone', type: 'line', source: 'za-zones', layout: { 'line-cap': 'round', 'line-join': 'round' },
@@ -4469,14 +4471,21 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   // keep the car in the visible part of the map, a little below the middle (the panel or Car mode covers part of the screen)
   function d3Pad() {
     const w = d3box.clientWidth || 390, h = d3box.clientHeight || 844, car = document.body.classList.contains('carmode');
-    if (car && w > h) return { left: Math.min(Math.round(w * .38), 430), top: Math.round(h * .3), right: 0, bottom: 0 };
-    if (!car && w >= 900) return { left: 390, top: Math.round(h * .3), right: 0, bottom: 0 };
+    // (21 Nov 2026, Waze-inspired) the car low on the screen, most of it the road ahead
+    if (car && w > h) return { left: Math.min(Math.round(w * .38), 430), top: Math.round(h * .46), right: 0, bottom: 0 };
+    if (!car && w >= 900) return { left: 390, top: Math.round(h * .46), right: 0, bottom: 0 };
     // phone: the panel or Car mode card covers the bottom; put the car about two-thirds of the way down the part still visible
     const cover = Math.min(h - 120, Math.round(((car ? $('car').getBoundingClientRect().height : $('panel').getBoundingClientRect().height) || 0) + 12));
     const vis = h - cover;
-    return { left: 0, right: 0, top: Math.round(vis * .36), bottom: cover };
+    return { left: 0, right: 0, top: Math.round(vis * .5), bottom: cover };
   }
   // the camera: behind the car, tilted, the road ahead pointing up; zooms out a little at speed
+  function d3SpeedZoom(kmh) {
+    const pts = [[0, 17.3], [30, 17.1], [50, 16.6], [70, 16.1], [90, 15.6], [110, 15.2]];
+    if (!(kmh > 0)) return pts[0][1];
+    for (let i = 1; i < pts.length; i++) if (kmh <= pts[i][0]) { const [a, za] = pts[i - 1], [b, zb] = pts[i]; return za + (zb - za) * (kmh - a) / (b - a); }
+    return pts[pts.length - 1][1];
+  }
   function d3Frame() {
     D3.raf = 0;
     const m = D3.map; if (!m || d3box.hidden) return;
@@ -4486,7 +4495,8 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
       if (h != null) D3.head = D3.head == null ? h : (D3.head + (((h - D3.head + 540) % 360) - 180) * .15 + 360) % 360;
       D3.marker.setLngLat([p[1], p[0]]); if (D3.head != null) D3.marker.setRotation(D3.head);
       const kmh = typeof LIVE !== 'undefined' && LIVE.on ? (LIVE.speed || 0) * 3.6 : lastInfo ? lastInfo.kmh || 0 : 0;
-      const zt = kmh > 75 ? 15.9 : kmh > 45 ? 16.5 : 17.1; D3.zoom += (zt - D3.zoom) * .03;
+      // (21 Nov 2026) zoom by speed, smoothly: close in town, further out on the freeway (the same curve as CarPlay's)
+      const zt = d3SpeedZoom(kmh); D3.zoom += (zt - D3.zoom) * .03;
       if (D3.follow && performance.now() > (D3.easeUntil || 0)) {
         m.jumpTo({ center: [p[1], p[0]], bearing: D3.head || 0, pitch: 60, zoom: Math.max(12, Math.min(19, D3.zoom + D3.zAdj)), padding: d3Pad() });
       }
