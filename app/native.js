@@ -302,6 +302,7 @@ window.ZA_PUSH = false;
   // is in front. They need notifications allowed with "Show in CarPlay" on, and Time Sensitive on so the Driving Focus
   // lets them through. Shows what's missing and the way to fix it. (App builds with bannerStatus only.)
   function bannerSetting() {
+    function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
     var cfg = document.getElementById('setCfg'); if (!cfg || !D.bannerStatus) return;
     var st = document.createElement('style');
     st.textContent = '#zaBanGrp .zanote{margin:8px 0 0;font-size:.9375rem;line-height:1.4;color:var(--muted)}#zaBanGrp .zanote.warn{color:#b3261e;font-weight:700}#zaBanGrp .zaok{color:#0f7a55;font-weight:700}#zaBanGrp .btn{margin-top:10px;min-height:48px;width:100%}';
@@ -315,8 +316,10 @@ window.ZA_PUSH = false;
       else if (S.carPlay === 'notSupported' && !S.asked) { note = 'Camera warnings aren\'t allowed on the car screen yet.'; btn = '<button class="btn primary" type="button" id="zaBanAsk">Allow on CarPlay</button>'; }
       else if (S.carPlay !== 'enabled') { note = 'Turn on <b>Show in CarPlay</b>: Settings › Notifications › Zone Ahead. (It appears there once CarPlay has been connected.)'; btn = '<button class="btn" type="button" id="zaBanSet">Open Settings</button>'; }
       else if (S.timeSensitive === 'disabled') { note = 'Turn on <b>Time Sensitive Notifications</b> (Settings › Notifications › Zone Ahead), so warnings still pop up with the Driving Focus on.'; btn = '<button class="btn" type="button" id="zaBanSet">Open Settings</button>'; }
-      else { ok = true; note = '<span class="zaok">✓ On.</span> With another app on the car screen, each warning also pops up there (once Zone Ahead has been opened on the car, or Drive is on). If your Driving Focus hides them: Settings › Focus › Driving › Apps, and allow Time Sensitive notifications.'; }
-      return '<b>Pop-ups on CarPlay</b><p class="zanote' + (!ok && S && S.auth !== 'notDetermined' ? ' warn' : '') + '">' + note + '</p>' + btn;
+      else { ok = true; note = '<span class="zaok">✓ On.</span> With Waze, Google Maps or Apple Maps on the car screen, each warning pops up there: hidden camera zone ahead, in the zone, zone ended, and fixed cameras. Not showing? Zone Ahead must be on the car\'s CarPlay Home Screen (iPhone Settings › General › CarPlay › your car › Customise), and Driving Focus must allow Time Sensitive notifications.'; }
+      // (22 Nov) what happened to the last pop-up, to tell why one didn't show
+      var last = S && S.last && S.last.title ? '<p class="zanote">Last pop-up, ' + esc(S.last.at || '') + ': <b>' + esc(S.last.title) + '</b>, ' + esc(S.last.result || '') + '.</p>' : '';
+      return '<b>Pop-ups on CarPlay</b><p class="zanote' + (!ok && S && S.auth !== 'notDetermined' ? ' warn' : '') + '">' + note + '</p>' + last + btn;
     }
     function draw() {
       var g = document.getElementById('zaBanGrp');
