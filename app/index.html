@@ -3397,11 +3397,12 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
       else was.lines = was.lines.concat(lines);
     }
     // where dots already are (a grid of half-steps), so overlapping pieces don't put two side by side
-    const taken = new Map(), cell = step / 2, kx = Math.cos(p[0] * RAD) * 111320, ky = 110540;
+    // (a divided road's two carriageways, 15-30 m apart, as one row: a dot is left out within 0.9 of a step of another)
+    const taken = new Map(), cell = step, kx = Math.cos(p[0] * RAD) * 111320, ky = 110540;
     const ck = (la, lo) => Math.floor(la * ky / cell) + ':' + Math.floor(lo * kx / cell);
     const near = (la, lo) => {
       const a = Math.floor(la * ky / cell), b = Math.floor(lo * kx / cell);
-      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const q of taken.get((a + i) + ':' + (b + j)) || []) if (dist(q, [la, lo]) < step * .55) return true;
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const q of taken.get((a + i) + ':' + (b + j)) || []) if (dist(q, [la, lo]) < step * .9) return true;
       return false;
     };
     const len = ln => { let m = 0; for (let i = 1; i < ln.length; i++) m += dist(ln[i - 1], ln[i]); return m; };
