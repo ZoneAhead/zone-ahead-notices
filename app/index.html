@@ -3372,18 +3372,62 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     if (H != null && dmin < 60 && angDiff(H, bearing(p, qmin)) > 45) tight = Infinity;
     return { dmin, bmin, ahead, tight, along: along(bmin) };
   }
-  // dotted lines along every listed street near you while driving
+  // dotted lines along every listed street near you while driving.
+  // (22 Nov 2026) The dots are placed here, evenly, instead of by the line's dash pattern: streets are stored in pieces
+  // (overlapping at junctions and roundabouts, short stubs, one copy per listed site on the street), and each piece
+  // started its own dots, so they bunched and overlapped. Now: one dot every ~16 screen pixels along each street, a dot
+  // left out where one is already within half a step, all the same size, and laid again when the map zooms.
   const dotLayer = L.layerGroup().addTo(map);
-  function drawDots() {
-    const p = LIVE.pos; if (!p || (LIVE.dotsAt && dist(LIVE.dotsAt, p) < 1500)) return;
+  const dotRenderer = L.canvas({ padding: .3 });
+  const DOT_PX = 16;
+  function drawDots(force) {
+    const p = LIVE.pos; if (!p || (!force && LIVE.dotsAt && dist(LIVE.dotsAt, p) < 1500)) return;
     LIVE.dotsAt = p; dotLayer.clearLayers();
+    // metres between dots: DOT_PX on screen at this zoom
+    const step = DOT_PX * 156543.03 * Math.cos(p[0] * RAD) / Math.pow(2, map.getZoom());
+    // one colour per street: the highest hotspot level listed on it (phone camera zones their own colour)
+    const rank = { high: 4, medium: 3, std: 2, site: 1 };
+    const streets = new Map();
     for (const x of items) {
       if ((x.type !== 'mobile' && !x.zone) || x.lat == null || !typeOn[x.type] || !roSite(x) || Math.abs(x.lat - p[0]) > .05 || Math.abs(x.lon - p[1]) > .065) continue;
       const lines = streetOf(x); if (!lines) continue;
-      const col = x.type === 'phone' ? TYPE_COLOUR.phone : colour(x.level);
-      for (const ln of lines) L.polyline(ln, { color: col, weight: 7, opacity: .9, dashArray: '0.1 12', lineCap: 'round', interactive: false }).addTo(dotLayer);
+      const k = x.type + '|' + norm(x.street) + '|' + (x.suburb || '');
+      const was = streets.get(k), r = rank[x.level] || 0;
+      if (!was || r > was.r) streets.set(k, { r, col: x.type === 'phone' ? TYPE_COLOUR.phone : colour(x.level), lines: was ? was.lines.concat(lines) : lines });
+      else was.lines = was.lines.concat(lines);
+    }
+    // where dots already are (a grid of half-steps), so overlapping pieces don't put two side by side
+    const taken = new Map(), cell = step / 2, kx = Math.cos(p[0] * RAD) * 111320, ky = 110540;
+    const ck = (la, lo) => Math.floor(la * ky / cell) + ':' + Math.floor(lo * kx / cell);
+    const near = (la, lo) => {
+      const a = Math.floor(la * ky / cell), b = Math.floor(lo * kx / cell);
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const q of taken.get((a + i) + ':' + (b + j)) || []) if (dist(q, [la, lo]) < step * .55) return true;
+      return false;
+    };
+    const len = ln => { let m = 0; for (let i = 1; i < ln.length; i++) m += dist(ln[i - 1], ln[i]); return m; };
+    for (const st of streets.values()) {
+      // long pieces first, so a stub at a junction only adds dots where the street had none
+      const pieces = st.lines.filter(ln => ln.length > 1).map(ln => ({ ln, m: len(ln) })).filter(o => o.m >= 15).sort((a, b) => b.m - a.m);
+      for (const { ln } of pieces) {
+        let carry = 0;   // metres since the last dot, carried along the piece
+        for (let i = 1; i < ln.length; i++) {
+          const a = ln[i - 1], b = ln[i], d = dist(a, b);
+          let t = step - carry;
+          while (t <= d) {
+            const f = t / d, q = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+            if (!near(q[0], q[1])) {
+              const key = ck(q[0], q[1]); (taken.get(key) || taken.set(key, []).get(key)).push(q);
+              L.circleMarker(q, { renderer: dotRenderer, radius: 3.5, stroke: false, fillColor: st.col, fillOpacity: .95, interactive: false }).addTo(dotLayer);
+            }
+            t += step;
+          }
+          carry = t - step < 0 ? carry + d : d - (t - step);   // metres from the last dot to this point
+        }
+      }
     }
   }
+  // the same spacing on screen at every zoom (the map zooms out with speed)
+  map.on('zoomend', () => { if (LIVE.pos && dotLayer.getLayers().length) drawDots(true); });
   const liveCar = L.marker([0, 0], { icon: carIcon, interactive: false, keyboard: false, zIndexOffset: 1100 });
   const liveAcc = L.circle([0, 0], { radius: 10, color: '#1a73e8', weight: 1, fillOpacity: .08, interactive: false });
   // identity of an alert; listed sites on the same street count as one zone, so they don't warn twice
