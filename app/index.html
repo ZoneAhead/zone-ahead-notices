@@ -2700,14 +2700,15 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   // (20 Nov 2026) chimes: each kind of alert its own sound, in the chosen style (Settings), from chimes/<style>-<name>.mp3
   // (map/make_chimes.py), matched to a music track's loudness. In the phone app they play through the app (so they reach
   // the car's speakers and follow the music's volume); on the web from the file; the old beeps if neither works.
-  // (chimes/…mp3?v=2: a tune per camera kind, 20 Nov; the query skips older saved copies)
+  // (chimes/…mp3?v=3: simpler tunes in two styles, 22 Nov; the query skips older saved copies)
   const CHIMES = { buf: {}, native: null };
   function chime(n) {
     if (!S.voice || quiet()) return;
     playChime(typeof n === 'string' ? n : n > 1 ? 'fixed' : 'ahead');
   }
   function playChime(name, style) {
-    const st = style || window.ZA_CHIME || 'radar';
+    let st = style || window.ZA_CHIME || 'radar';
+    if (st === 'classic') st = 'radar'; else if (st === 'bell') st = 'soft';   // (22 Nov: two styles now)
     const D = window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform() && Capacitor.Plugins ? Capacitor.Plugins.ZoneAheadDrive : null;
     if (D && D.chime && CHIMES.native !== false) {
       try { D.chime({ name, style: st }).then(() => { CHIMES.native = true; }, () => { CHIMES.native = false; webChime(name, st); }); return; } catch { CHIMES.native = false; }
@@ -2721,7 +2722,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
       if (actx.state === 'suspended' && actx.resume) actx.resume();
       const key = st + '-' + name;
       let b = CHIMES.buf[key];
-      if (!b) { const r = await fetch('chimes/' + key + '.mp3?v=2'); if (!r.ok) throw 0; const ab = await r.arrayBuffer(); b = CHIMES.buf[key] = await new Promise((ok, no) => actx.decodeAudioData(ab, ok, no)); }
+      if (!b) { const r = await fetch('chimes/' + key + '.mp3?v=3'); if (!r.ok) throw 0; const ab = await r.arrayBuffer(); b = CHIMES.buf[key] = await new Promise((ok, no) => actx.decodeAudioData(ab, ok, no)); }
       const src = actx.createBufferSource(), g = actx.createGain();
       g.gain.value = Math.min(1, window.ZA_VOL || 1); src.buffer = b; src.connect(g); g.connect(actx.destination); src.start();
     } catch { oscChime(name); }
@@ -4768,6 +4769,10 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
   if (!QOL.voice) { QOL.voice = 'off'; QOL.voiceNews = 1; }
   if (QOL.alerts === 'beeps') { QOL.alerts = 'all'; QOL.voice = 'off'; }
   QOL.vol = Math.max(25, Math.min(100, +QOL.vol || 100));
+  // (22 Nov 2026) two chime styles now: Classic becomes Radar, Bell becomes Soft
+  if (QOL.chime === 'classic') QOL.chime = 'radar';
+  if (QOL.chime === 'bell') QOL.chime = 'soft';
+  if (QOL.chime !== 'radar' && QOL.chime !== 'soft') QOL.chime = 'radar';
   window.ZA_CHIME = QOL.chime;
   // (the phone app's drive engine reads the same settings: native.js listens for za-settings)
   const qolSave = () => { try { localStorage.setItem('za-qol', JSON.stringify(QOL)); } catch { } window.ZA_VOL = (QOL.vol || 100) / 100; window.ZA_CHIME = QOL.chime; try { window.dispatchEvent(new Event('za-settings')); } catch { } };
@@ -5127,7 +5132,7 @@ const PROVEN = [{"street":"Kensington Road","suburb":"Kensington","between":"Dyn
     ['red', 'Red-light camera'], ['phone', 'Phone & seatbelt camera'], ['fixed', 'Fixed speed camera'], ['p2p', 'Average speed section'],
     ['fixhere', 'At the camera'], ['police', 'Police reported'], ['report', 'Hazard reported'], ['over', 'Over the speed limit']];
   let chimeGuideOpen = false;
-  const CHIME_STYLES = { radar: ['Radar', 'Short bright beeps in quick bursts, like a radar detector'], classic: ['Classic', 'Clean two-note chimes'], soft: ['Soft', 'Low, rounded notes'], bell: ['Bell', 'A two-note bell'] };
+  const CHIME_STYLES = { radar: ['Radar', 'Short, bright beeps'], soft: ['Soft', 'Low, rounded notes'] };
   function setDraw() {
     const c = $('setCfg'), P = QOL.places;
     const pl = k => P[k] ? `<span>${esc(P[k].label)}</span><button class="btn" type="button" data-clear="${k}">Forget</button>` : '<span class="sub">Not set. Use Plan a trip, then Save.</span><span></span>';

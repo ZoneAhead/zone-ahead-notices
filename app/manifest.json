@@ -8,185 +8,97 @@
 "sha": "a652975fb6373c90c4cfccd22fe0da39453ad518d1783190464898134bbfd30a",
 "size": 1775
 },
-"chimes/bell-ahead.mp3": {
-"sha": "9e4cfe11fa49ef8921facda453e42cc91fc09653d7ab9cc5c8f396c3927fe64a",
-"size": 19688
-},
-"chimes/bell-ended.mp3": {
-"sha": "8c8c7f4cb972138e5e7ac52085f373a7f5da1ff34e0626ce5b21c6551ab1af70",
-"size": 17180
-},
-"chimes/bell-fixed.mp3": {
-"sha": "2a57e7b03ae8584b13ccdc7542e250c6502aeaa68f3dde7f34f1472aa5e02aa7",
-"size": 33062
-},
-"chimes/bell-fixhere.mp3": {
-"sha": "c8a3c558a73c92e554a1d82183ba4b18ef6a230350b0362fad92c4e0345d1c40",
-"size": 21777
-},
-"chimes/bell-over.mp3": {
-"sha": "f913cfcb60a449613aa20b42e0c7031bc02350f729d66c579b766346adfcf023",
-"size": 20524
-},
-"chimes/bell-p2p.mp3": {
-"sha": "7d76fe33d3419c7e45ef7557a61835aa8bf4d713e9d754de693cc15890c114dd",
-"size": 31808
-},
-"chimes/bell-phone.mp3": {
-"sha": "9f0bf040eb224312841bf5b2ed0b3effe2340ca18854b1b5136eb4c2532a15ec",
-"size": 20524
-},
-"chimes/bell-police.mp3": {
-"sha": "801c2dc7b047c26964f56f9d73ecab3f6c0c3bdb60051c64c7c466a14062009f",
-"size": 22195
-},
-"chimes/bell-red.mp3": {
-"sha": "221cc1b3329ed123b8c83e48f4bd947e9a08c469387d471750ee8cea87331d80",
-"size": 25539
-},
-"chimes/bell-report.mp3": {
-"sha": "ca73a8eef404ed557e68b01c1be682037bcbc4dcb18464bda0d05fa422a8a6c3",
-"size": 16762
-},
-"chimes/bell-zone.mp3": {
-"sha": "586b672cdcd32424f84df691e7b1089e54a3c538b87b6a0d4ba1a24f7b0e83d1",
-"size": 25121
-},
 "chimes/chimes.json": {
-"sha": "798ef250ef92d6fbea9dce8cac265e9c30f5869af58168ba8dcf7f94253aeb9e",
-"size": 172
-},
-"chimes/classic-ahead.mp3": {
-"sha": "8cf9c6ef85d8efe1494348d1f90e0c62ca2a2f0504cfb9bffe926be2b9c203b6",
-"size": 10911
-},
-"chimes/classic-ended.mp3": {
-"sha": "63c00752c37577d6d4c68b5929b33035c5080dda8df3e12dac7528a4e51d798d",
-"size": 10911
-},
-"chimes/classic-fixed.mp3": {
-"sha": "3acda4be10533d0fdf2e3d2bdfb10922f8c80f9eab9b9f573694f20f0e5de0d7",
-"size": 20942
-},
-"chimes/classic-fixhere.mp3": {
-"sha": "e389e7907ff0982fcabac33ecff013759ee92407d41655a00a4044b79b389e82",
-"size": 14672
-},
-"chimes/classic-over.mp3": {
-"sha": "c891f6bcf993e59d463df94563aad5ccf631dd2d03055e810b8cfb0620ec0f50",
-"size": 12582
-},
-"chimes/classic-p2p.mp3": {
-"sha": "05408d76de2cc463e247c36b84d6c1af48924e2514ab1bf1466b336b4c10dbbc",
-"size": 23031
-},
-"chimes/classic-phone.mp3": {
-"sha": "8d032728cc4c3a45e1a5fffb2760ff0b621b62f9625b6ca28d05f3379bc8e91d",
-"size": 20106
-},
-"chimes/classic-police.mp3": {
-"sha": "1c9e60fbdf9406613cac2db4f4ad255218f689c6aa64273681e856594d787458",
-"size": 14254
-},
-"chimes/classic-red.mp3": {
-"sha": "11dcf71d903b0bdc1978fa7660871853a89129b254d7f1df5d474a463ac4da38",
-"size": 17598
-},
-"chimes/classic-report.mp3": {
-"sha": "20b4d7a82c9fc8e473e7bed248d23633604de69c9bcb04eb70910a1c66e70c70",
-"size": 10911
-},
-"chimes/classic-zone.mp3": {
-"sha": "767e48f207429ab5e5c6ebb32523bd386db36bf728095256c7e314c0e2f99549",
-"size": 23031
+"sha": "66d052cebc3e53d337f6bac8e0229907f29b3fdaf25aa8860ad823c22df99543",
+"size": 153
 },
 "chimes/radar-ahead.mp3": {
-"sha": "efeae811d4374c3dea094abb724dbd9c23acb6d2ade994cb142c752533dc17b3",
-"size": 7567
+"sha": "94aa2f7a24f040d5b2cc264ba930aea2eb49a8ca2183698ac568202f0bc7f544",
+"size": 9239
 },
 "chimes/radar-ended.mp3": {
-"sha": "39a1a1f859e93f39d6609a32138a1d4848f7c2e6b612afe1a262525a25cefb9c",
-"size": 7567
-},
-"chimes/radar-fixed.mp3": {
-"sha": "858a55d42b2c240966f30ec6208a04f45bee66a5d90f55fb0a9ccf10f5686ad7",
-"size": 14254
-},
-"chimes/radar-fixhere.mp3": {
-"sha": "5e164e285bfb80e00bdcd3f6fc5440a8c115a092a81e22b29b5bb79a5c16e42b",
-"size": 10075
-},
-"chimes/radar-over.mp3": {
-"sha": "3032227564b7088a3517ea4687a5c682babb38d1b2990acfb22de9e1bf23a917",
+"sha": "f82aabb7512764d7a30e3e58af937c7d2128e1b722309ba91cc69030d3db0bbf",
 "size": 8821
 },
-"chimes/radar-p2p.mp3": {
-"sha": "fa831cc6db4d4c410e8102000dbe2d59c0704d78cf7f10887e0cbdb2e2e70ab1",
-"size": 15090
-},
-"chimes/radar-phone.mp3": {
-"sha": "52306e646f7d1ff7331f9fac4c9aad80df282b52e59b5352b3410e79c81d2288",
-"size": 13836
-},
-"chimes/radar-police.mp3": {
-"sha": "0def04d9db48cd90bd3a4ba9a2e49611e7e001beee45573d1f9a638ce0216cce",
+"chimes/radar-fixed.mp3": {
+"sha": "3636f5befeb8a013beced2ff40c78663c8f69cc5d934d8b4a1a140966bfab36e",
 "size": 9657
 },
+"chimes/radar-fixhere.mp3": {
+"sha": "42265b7f3d5239ea5a203c2966987bc4f264a9fb626ac318c604ae73b9a3fafd",
+"size": 5895
+},
+"chimes/radar-over.mp3": {
+"sha": "f84bee35105648b9a3f5dff0caa341c09a284597d6702f157efd54c73fc9fb43",
+"size": 9657
+},
+"chimes/radar-p2p.mp3": {
+"sha": "dce361bcaa48df5d9d947c59f9c15bf8859879074442fd881b575264eeff5fc0",
+"size": 16344
+},
+"chimes/radar-phone.mp3": {
+"sha": "1e580a33802f364f926871d9765b626412b9e2fc179397a031aba5e1c554f351",
+"size": 6731
+},
+"chimes/radar-police.mp3": {
+"sha": "06513fb5423005e7d9c880968f42f15dc5b70b7fdd679558f93d9a5f42b42772",
+"size": 10075
+},
 "chimes/radar-red.mp3": {
-"sha": "388864d9d1c8ba650b7aa7b1ae5cb4785160904ef8ea11197e60dac4f64f3750",
-"size": 12164
+"sha": "71f77db19d02cd46b2489b6b8b646ed5a2a510e7a20d2f4ebe93e0f596b8186d",
+"size": 12582
 },
 "chimes/radar-report.mp3": {
-"sha": "b9132b30bfad65e4971f285664b285432973eaf2d1024d72a2821ff501126d61",
-"size": 7567
+"sha": "b975482ae914d01bf67ee76da66d0e938565acf81d042f6f86321c00880a5537",
+"size": 7985
 },
 "chimes/radar-zone.mp3": {
-"sha": "811b4121a830be5d763d139e4a8e281e178d3b2652bb770f625c25ab102c781f",
-"size": 15508
+"sha": "f439c4b551053c48be5d4b3b7e2ec355bbecb3f26e58c65cf7572126e7ed8168",
+"size": 8403
 },
 "chimes/soft-ahead.mp3": {
-"sha": "3fd1290e7a3a3e1892d0a11ad9372a5147fb9feca8162a210c48b65f7d8a957a",
-"size": 15926
+"sha": "d98a58204a31d5c680e63106b50a8d3ee90927d12fd8434cc30bc592c53fc061",
+"size": 14672
 },
 "chimes/soft-ended.mp3": {
-"sha": "b7ca498f45143cd5c88a34dadd126e0523e6c0302b3b768a7eee855a5170ca22",
-"size": 15508
+"sha": "5f5717f213a4b4b502b136a000236bf17f63af122fa85b86d72deaad320ecc4c",
+"size": 14254
 },
 "chimes/soft-fixed.mp3": {
-"sha": "c7ec6d996500c797960f139dcbbe9ff7158fc7fbd78d0cd3a625d726722bcf67",
-"size": 26375
-},
-"chimes/soft-fixhere.mp3": {
-"sha": "5f383409e6a9210a8de1746b1be16dee8fc05331f14027577adb01109e7f9883",
-"size": 19270
-},
-"chimes/soft-over.mp3": {
-"sha": "eccefc0bea534a8538144985c7ae6e34744f2143bec4b41f265f7ee6c71b9d71",
-"size": 17180
-},
-"chimes/soft-p2p.mp3": {
-"sha": "7e7a10e9140f726d751b9d81604712553b4b7da46dc81d7131d8a1c96daee15d",
-"size": 28047
-},
-"chimes/soft-phone.mp3": {
-"sha": "7ed435b8b4705178fff0935ec863e7b384faed18cb4ac819d4fa5936811e0893",
-"size": 20106
-},
-"chimes/soft-police.mp3": {
-"sha": "922157afb598a4e49739db5d4994d2d879eb5a28df4ba69f81336a462710e4af",
-"size": 18852
-},
-"chimes/soft-red.mp3": {
-"sha": "b3cf027de5b432b8ffd6f4bf0163048aa0f0fba07120b84e44ba4f40f469c8ad",
-"size": 22613
-},
-"chimes/soft-report.mp3": {
-"sha": "bfa103ea6d3d238e85ec10f0b5e5cc313c13b753d783a0cc64f093b51d067daf",
+"sha": "37e870284de463eb79ceec437b0a06a7c612c122efb1c69de058139fc7eedb64",
 "size": 15508
 },
+"chimes/soft-fixhere.mp3": {
+"sha": "ce11d22264022e9dedaacd167a9ce4861459aad2a7767bfdf98a66cc3c72c894",
+"size": 11328
+},
+"chimes/soft-over.mp3": {
+"sha": "3821c5277a1e7da4dbcc0db26cebb8d96de28bd5a062703a92477eb1b3ac7cc5",
+"size": 15926
+},
+"chimes/soft-p2p.mp3": {
+"sha": "2b48e6f34204fc2c2f9182c915db9986929e16bd12506f20fa8679b5f27b8e62",
+"size": 24285
+},
+"chimes/soft-phone.mp3": {
+"sha": "489af7d2d3be83008d4bc7598ab52263106c335fda53ae03b7a1454c0321b052",
+"size": 10911
+},
+"chimes/soft-police.mp3": {
+"sha": "69a17be995cb5c520533128e0a33fd9d6c964513f5069a88fb302dbbf680fd3e",
+"size": 16344
+},
+"chimes/soft-red.mp3": {
+"sha": "74eb15a9f09d5fad3e6963b0a7689060b2f4ac71d507b70b592c57d12a603138",
+"size": 18852
+},
+"chimes/soft-report.mp3": {
+"sha": "46ae34bd2d348d345ce28c4ab403c7f4258967887e84e986916f2b1be381cd81",
+"size": 13000
+},
 "chimes/soft-zone.mp3": {
-"sha": "2a47dcdf9231c9eec04ee1414f59b706b2ab3bb2fc283fedb3b6c522c0f35b0d",
-"size": 19270
+"sha": "b9ff5a72a4866e2ec6d0765d749d52be189968685d6e644d07a72021f6a633a1",
+"size": 15508
 },
 "favicon-32.png": {
 "sha": "af988086597f2289976e58f2000ffa64d886c5b31a2ad18f753fbf5afbda4968",
@@ -273,8 +185,8 @@
 "size": 5048
 },
 "index.html": {
-"sha": "80878b71b54cd9f634ba6c0965ccf6801e85e041ab67149f5c5c745f87e9a8a7",
-"size": 1976620
+"sha": "672cc09713c7fea928e17f5938772fc7c9273994dd00e5cb7c1bfa2893e06ee1",
+"size": 1976866
 },
 "manifest.webmanifest": {
 "sha": "e4fa360f27dd5f78cbfc7b667ab278eebb2bc9ee99495497f390613f040ac4ce",
@@ -289,8 +201,8 @@
 "size": 40502
 },
 "native-zones.json": {
-"sha": "6aeb1be6f970821134e382f87c5dc5fa64294d01f46aff7e1d4b0b17f8ed3bf4",
-"size": 3819463
+"sha": "5abd614abb326acb0e3adfd45c1d1b44c9e08e63ac626c1b259399b587256831",
+"size": 5006476
 },
 "native.js": {
 "sha": "aa7db951d49e03c1b4435867f69e30513efbda9f78098117f6a93da85c5eae7a",
@@ -305,7 +217,7 @@
 "size": 2717
 },
 "web-version.json": {
-"sha": "84ede38f7497e5e5f94e24074bd5a45cb2824594fe324141e6906a0b3b8b1def",
+"sha": "143613e8f92f899d6a6358935e573d8d4c7fd0b51db97332f1cf0e54e46a999d",
 "size": 100
 }
 },
@@ -313,5 +225,5 @@
 "index.html"
 ],
 "native": 2,
-"version": 1795252293
+"version": 1795313885
 }
